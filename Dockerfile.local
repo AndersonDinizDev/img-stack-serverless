@@ -1,0 +1,41 @@
+FROM php:8.2-fpm-alpine
+
+RUN apk add --no-cache \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    libwebp-dev \
+    libzip-dev \
+    freetype-dev \
+    icu-dev \
+    oniguruma-dev \
+    curl-dev \
+    libxml2-dev \
+    git
+
+RUN docker-php-ext-install pdo_mysql \
+    && docker-php-ext-install mbstring \
+    && docker-php-ext-install pcntl bcmath \
+    && docker-php-ext-install zip intl \
+    && docker-php-ext-install xml
+
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install gd
+
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
+
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+RUN addgroup -g 1000 -S www && \
+    adduser -u 1000 -S www -G www && \
+    chown -R www:www /var/www
+
+
+RUN apk add --no-cache bash
+
+USER www
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["php-fpm"]
