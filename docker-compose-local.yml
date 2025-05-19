@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  app:
+    container_name: img_stack_app
+    build:
+      context: .
+      dockerfile: Dockerfile.local
+      args:
+        user: ${USER}
+        uid: ${UID}
+        gid: ${GID}
+    working_dir: /var/www/html
+    networks:
+      - img_stack_network
+    ports:
+    - "80:80"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/local/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    depends_on:
+      - redis
+      - dynamodb
+
+  redis:
+    image: redis:latest
+    container_name: img_stack_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - img_stack_network
+
+  dynamodb:
+    image: amazon/dynamodb-local
+    command: "-jar DynamoDBLocal.jar -sharedDb"
+    container_name: img_stack_dynamodb
+    ports:
+      - "8000:8000"
+    networks:
+      - img_stack_network
+    volumes:
+      - dynamodbdata:/home/dynamodblocal/data
+
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin
+    container_name: img_stack_dynamodb_admin
+    ports:
+      - "8001:8001"
+    environment:
+    - DYNAMO_ENDPOINT=http://dynamodb:8000
+    - DYNAMODB_ENDPOINT=http://dynamodb:8000
+    - AWS_DYNAMODB_ENDPOINT=http://dynamodb:8000
+    - AWS_REGION=us-east-1
+    - AWS_ACCESS_KEY_ID=local
+    - AWS_SECRET_ACCESS_KEY=local
+    networks:
+      - img_stack_network
+    depends_on:
+      - dynamodb
+
+networks:
+  img_stack_network:
+    driver: bridge
+
+volumes:
+  redisdata:
+  dynamodbdata:
