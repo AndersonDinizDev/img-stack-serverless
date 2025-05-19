@@ -14,7 +14,7 @@ services:
     networks:
       - img_stack_network
     ports:
-    - "80:80"
+      - "80:80"
     volumes:
       - ./:/var/www/html
       - ./docker/local/php/local.ini:/usr/local/etc/php/conf.d/local.ini
@@ -49,16 +49,36 @@ services:
     ports:
       - "8001:8001"
     environment:
-    - DYNAMO_ENDPOINT=http://dynamodb:8000
-    - DYNAMODB_ENDPOINT=http://dynamodb:8000
-    - AWS_DYNAMODB_ENDPOINT=http://dynamodb:8000
-    - AWS_REGION=us-east-1
-    - AWS_ACCESS_KEY_ID=local
-    - AWS_SECRET_ACCESS_KEY=local
+      - DYNAMO_ENDPOINT=http://dynamodb:8000
+      - DYNAMODB_ENDPOINT=http://dynamodb:8000
+      - AWS_DYNAMODB_ENDPOINT=http://dynamodb:8000
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=local
+      - AWS_SECRET_ACCESS_KEY=local
     networks:
       - img_stack_network
     depends_on:
       - dynamodb
+
+  node:
+    image: node:latest
+    container_name: img_stack_node
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    networks:
+      - img_stack_network
+    depends_on:
+      - app
+    tty: true
+    stdin_open: true
+    command: >
+      /bin/sh -c "npm install -g serverless@3.39.0 &&
+      tail -f /dev/null"
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_DEFAULT_REGION}
 
 networks:
   img_stack_network:
