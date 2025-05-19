@@ -2,6 +2,8 @@ DC=docker-compose-local.yml
 
 .PHONY: up down build restart logs
 
+## Comandos base
+
 up:
 	@docker-compose -f ${DC} up -d --remove-orphans
 
@@ -19,6 +21,13 @@ logs:
 	@docker-compose -f ${DC} logs -f
 
 
-## Entrar nos containers
+## Acessar containers
 app-bash:
 	@docker-compose -f ${DC} exec app bash
+
+node-bash:
+	@docker-compose -f ${DC} exec node bash
+
+## Comando do serverless
+deploy-prod:
+	@docker-compose -f ${DC} exec node bash -c "sls deploy --stage prod"

@@ -2,7 +2,7 @@
 
 ## Descrição
 
-Este projeto é uma API serverless que permite processar e transformar imagens sob demanda através de URLs ou chamadas de API. Em vez de pré-processar todas as variações de imagens (que consome tempo e espaço), este serviço gera e armazena transformações apenas quando solicitadas.
+Este serviço permite manipular e transformar imagens dinamicamente em tempo real, oferecendo redimensionamento, cortes, filtros e otimização sem necessidade de pré-processamento, ideal para diversos setores que demandam conteúdo visual adaptável.
 
 ## Requisitos
 - Docker
@@ -35,3 +35,5 @@ make up
 - `make logs`: Exibe os logs dos serviços.
 - `make restart`: Para e recria os serviços.
 - `make app-bash`: Acessa o container da aplicação laravel.
+- `make node-bash`: Acessa o container do node.
+- `make deploy-prod`: Realiza o deploy da aplicação para produção.
