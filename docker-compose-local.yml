@@ -52,9 +52,9 @@ services:
       - DYNAMO_ENDPOINT=http://dynamodb:8000
       - DYNAMODB_ENDPOINT=http://dynamodb:8000
       - AWS_DYNAMODB_ENDPOINT=http://dynamodb:8000
-      - AWS_REGION=us-east-1
-      - AWS_ACCESS_KEY_ID=local
-      - AWS_SECRET_ACCESS_KEY=local
+      - AWS_REGION=${AWS_REGION_LOCAL}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID_LOCAL}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_LOCAL}
     networks:
       - img_stack_network
     depends_on:
@@ -73,8 +73,7 @@ services:
     tty: true
     stdin_open: true
     command: >
-      /bin/sh -c "npm install -g serverless@3.39.0 &&
-      tail -f /dev/null"
+      /bin/sh -c "npm install -g serverless@3.39.0 && tail -f /dev/null"
     environment:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}

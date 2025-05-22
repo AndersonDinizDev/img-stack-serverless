@@ -1,0 +1,154 @@
+service: image-processing-service
+
+provider:
+  name: aws
+  runtime: php-82-fpm
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+
+  environment:
+    APP_ENV: production
+    SESSION_DRIVER: cookie
+    LOG_CHANNEL: stderr
+    APP_DEBUG: false
+    FILESYSTEM_DRIVER: s3
+    FILESYSTEM_DRIVER_PUBLIC: s3
+    # Definição simples dos buckets sem referências circulares
+    AWS_BUCKET: ${self:service}-${opt:stage, self:provider.stage}-images
+    AWS_PUBLIC_BUCKET: ${self:service}-${opt:stage, self:provider.stage}-public
+    # Não tentamos definir o URL da fila aqui - isso evita a resolução de variáveis
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+            - s3:DeleteObject
+            - s3:ListBucket
+          Resource:
+            - "arn:aws:s3:::${self:service}-${opt:stage, self:provider.stage}-images/*"
+            - "arn:aws:s3:::${self:service}-${opt:stage, self:provider.stage}-images"
+            - "arn:aws:s3:::${self:service}-${opt:stage, self:provider.stage}-public/*"
+            - "arn:aws:s3:::${self:service}-${opt:stage, self:provider.stage}-public"
+        - Effect: Allow
+          Action:
+            - sqs:SendMessage
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+            - sqs:GetQueueAttributes
+          Resource:
+            # Referenciando o ARN diretamente pela saída do CloudFormation
+            - Fn::GetAtt: [ProcessingQueue, Arn]
+
+package:
+  patterns:
+    - "!node_modules/**"
+    - "!public/storage"
+    - "!resources/assets/**"
+    - "!resources/css/**"
+    - "!resources/images/**"
+    - "!resources/js/**"
+    - "!storage/**"
+    - "!tests/**"
+    - "!database/*.sqlite"
+    - "!public/build/**"
+    - "public/build/manifest.json"
+
+functions:
+  web:
+    handler: public/index.php
+    runtime: php-82-fpm
+    timeout: 28
+    events:
+      - httpApi: "*"
+
+  artisan:
+    handler: artisan
+    runtime: php-82-console
+    timeout: 720
+    events:
+      - schedule:
+          rate: rate(1 minute)
+          input: '"schedule:run"'
+
+  # Seguindo exatamente o padrão da documentação para o worker SQS
+  worker:
+    handler: artisan
+    runtime: php-82-console
+    timeout: 300
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - ProcessingQueue
+              - Arn
+          batchSize: 1
+    environment:
+      FUNCTION_NAME: worker
+
+plugins:
+  - ./vendor/bref/bref
+
+resources:
+  Resources:
+    # Definindo a fila de processamento
+    ProcessingQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${opt:stage, self:provider.stage}-queue
+        VisibilityTimeout: 300
+        RedrivePolicy:
+          deadLetterTargetArn:
+            Fn::GetAtt:
+              - ProcessingDeadLetterQueue
+              - Arn
+          maxReceiveCount: 3
+
+    # Fila de mensagens com falha
+    ProcessingDeadLetterQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${opt:stage, self:provider.stage}-dlq
+        MessageRetentionPeriod: 1209600
+
+    # Bucket de imagens
+    ImageBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:service}-${opt:stage, self:provider.stage}-images
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders: ["*"]
+              AllowedMethods: [GET, PUT, POST, DELETE, HEAD]
+              AllowedOrigins: ["*"]
+
+    # Bucket público
+    PublicBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:service}-${opt:stage, self:provider.stage}-public
+        # Remova a WebsiteConfiguration
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders: ["*"]
+              AllowedMethods: [GET, PUT, POST, DELETE, HEAD]
+              AllowedOrigins: ["*"]
+
+  # Outputs para facilitar o acesso aos recursos
+  Outputs:
+    ProcessingQueueUrl:
+      Description: "URL of the SQS Queue"
+      Value:
+        Ref: ProcessingQueue
+    ProcessingQueueArn:
+      Description: "ARN of the SQS Queue"
+      Value:
+        Fn::GetAtt:
+          - ProcessingQueue
+          - Arn
+    PublicBucketName:
+      Description: "Name of the public S3 bucket"
+      Value:
+        Ref: PublicBucket

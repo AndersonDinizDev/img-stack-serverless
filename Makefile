@@ -10,6 +10,12 @@ up:
 down:
 	@docker-compose -f ${DC} down --volumes
 
+stop:
+	@docker-compose -f ${DC} stop
+
+start:
+	@docker-compose -f ${DC} start
+
 build:
 	@docker-compose -f ${DC} build
 

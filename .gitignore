@@ -6,6 +6,7 @@
 /storage/*.key
 /storage/pail
 /vendor
+.serverless
 .env
 .env.backup
 .env.production
