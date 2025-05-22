@@ -37,3 +37,18 @@ node-bash:
 ## Comando do serverless
 deploy-prod:
 	@docker-compose -f ${DC} exec node bash -c "sls deploy --stage prod"
+
+deploy-dev:
+	@docker-compose -f ${DC} exec node bash -c "sls deploy --stage dev"
+
+info-dev:
+	@docker-compose -f ${DC} exec node bash -c "sls info --stage dev"
+
+info-prod:
+	@docker-compose -f ${DC} exec node bash -c "sls info --stage prod"
+
+remove-prod:
+	@docker-compose -f ${DC} exec node bash -c "sls remove --stage prod"
+
+remove-dev:
+	@docker-compose -f ${DC} exec node bash -c "sls remove --stage dev"

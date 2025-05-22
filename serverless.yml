@@ -68,10 +68,10 @@ functions:
     handler: artisan
     runtime: php-82-console
     timeout: 720
-    events:
-      - schedule:
-          rate: rate(1 minute)
-          input: '"schedule:run"'
+    # events:
+    #   - schedule:
+    #       rate: rate(1 minute)
+    #       input: '"schedule:run"'
 
   # Seguindo exatamente o padrão da documentação para o worker SQS
   worker:
