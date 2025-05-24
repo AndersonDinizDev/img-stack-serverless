@@ -93,3 +93,9 @@ git-save:
 	echo "\033[0;34m↑\033[0m Enviando para o repositório remoto..." && \
 	git push && \
 	echo "\033[0;32m✓\033[0m Alterações enviadas com sucesso!"
+
+# Comandos artisan
+test:
+	@echo "\033[0;34m↻\033[0m Executando testes..."
+	@docker-compose -f ${DC} exec app bash -c "php artisan test"
+	@echo "\033[0;32m✓\033[0m Testes executados com sucesso!"
