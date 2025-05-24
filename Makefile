@@ -1,8 +1,11 @@
 DC=docker-compose-local.yml
 
-.PHONY: up down build restart logs
+.PHONY: up down build restart logs stop start \
+        app-bash node-bash \
+        deploy-prod deploy-dev info-dev info-prod remove-prod remove-dev \
+        git-save
 
-## Comandos base
+## Comandos docker-compose
 
 up:
 	@docker-compose -f ${DC} up -d --remove-orphans
@@ -27,7 +30,7 @@ logs:
 	@docker-compose -f ${DC} logs -f
 
 
-## Acessar containers
+## Acessar containers do docker
 app-bash:
 	@docker-compose -f ${DC} exec app bash
 
@@ -52,3 +55,16 @@ remove-prod:
 
 remove-dev:
 	@docker-compose -f ${DC} exec node bash -c "sls remove --stage dev"
+
+# Comandos Git
+git-save:
+	@git add .
+	@echo "\033[0;33m⊕\033[0m Arquivos adicionados ao stage!"
+	@echo "\033[0;36m?\033[0m Digite a mensagem do commit:"
+	@read commit_msg && \
+	echo "\033[0;34m↻\033[0m Criando commit..." && \
+	git commit -m "$$commit_msg" && \
+	echo "\033[0;32m✓\033[0m Commit criado: '$$commit_msg'" && \
+	echo "\033[0;34m↑\033[0m Enviando para o repositório remoto..." && \
+	git push && \
+	echo "\033[0;32m✓\033[0m Alterações enviadas com sucesso!"
