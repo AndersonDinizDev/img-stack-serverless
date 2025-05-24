@@ -11,9 +11,23 @@ RUN apk add --no-cache \
     oniguruma-dev \
     curl-dev \
     libxml2-dev \
-    $PHPIZE_DEPS
-
-RUN docker-php-ext-install \
+    imagemagick-dev \
+    autoconf \
+    gcc \
+    g++ \
+    make \
+    pkgconfig \
+    libtool \
+    file \
+    re2c \
+    gettext-dev \
+    zlib-dev \
+    && pecl install imagick \
+    && docker-php-ext-enable imagick \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install \
     pdo_mysql \
     mbstring \
     pcntl \
@@ -21,11 +35,8 @@ RUN docker-php-ext-install \
     zip \
     intl \
     xml \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
-    && apk del $PHPIZE_DEPS
+    gd \
+    && apk del autoconf gcc g++ make pkgconfig libtool file re2c gettext-dev zlib-dev
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
