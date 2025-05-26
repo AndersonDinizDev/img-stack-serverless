@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProcessImageRequest;
 use App\Http\Services\ImageProcessingService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class ImageController extends Controller
 {
@@ -16,12 +15,18 @@ class ImageController extends Controller
         $this->imgService = $imgService;
     }
 
+    public function index(): JsonResponse
+    {
+        return response()->json([
+            'status' => 'ok'
+        ]);
+    }
+
     public function store(ProcessImageRequest $request): JsonResponse
     {
-        $data = $request->validated();
 
         try {
-            $imageData = $this->imgService->processImage($data);
+            $imageData = $this->imgService->processImage($request);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',

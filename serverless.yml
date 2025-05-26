@@ -1,4 +1,4 @@
-service: image-processing-service
+service: img-stack
 
 provider:
   name: aws
@@ -6,38 +6,45 @@ provider:
   region: us-east-1
   stage: ${opt:stage, 'dev'}
 
+  # Otimizações de custo
+  memorySize: 512 # Reduzido para MVP
+  timeout: 30 # Timeout padrão
+
   environment:
     APP_ENV: production
     SESSION_DRIVER: cookie
     LOG_CHANNEL: stderr
-    APP_DEBUG: false
+    APP_DEBUG: true
     FILESYSTEM_DRIVER: s3
     FILESYSTEM_DRIVER_PUBLIC: s3
-    # Definição simples dos buckets sem referências circulares
+    # Buckets
     AWS_BUCKET: ${self:service}-${opt:stage, self:provider.stage}-images
-    AWS_PUBLIC_BUCKET: ${self:service}-${opt:stage, self:provider.stage}-public
-    # Não tentamos definir o URL da fila aqui - isso evita a resolução de variáveis
+    AWS_BUCKET_CACHE: ${self:service}-${opt:stage, self:provider.stage}-cache
+    # SQS
+    SQS_QUEUE: ${self:service}-${opt:stage, self:provider.stage}-queue
+    SQS_PREFIX:
+      Fn::Sub: "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}"
+    # DynamoDB
+    DYNAMODB_METADATA_TABLE: ${self:service}-${opt:stage, self:provider.stage}-metadata
+    DYNAMODB_JOBS_TABLE: ${self:service}-${opt:stage, self:provider.stage}-jobs
 
   iam:
     role:
       statements:
+        # S3 Permissions
         - Effect: Allow
           Action:
             - s3:PutObject
             - s3:GetObject
             - s3:DeleteObject
             - s3:ListBucket
-            - dynamodb:Query
-            - dynamodb:Scan
-            - dynamodb:GetItem
-            - dynamodb:PutItem
-            - dynamodb:UpdateItem
-            - dynamodb:DeleteItem
           Resource:
-            - "arn:aws:s3:::${self:service}-${opt:stage, self:provider.stage}-images/*"
             - "arn:aws:s3:::${self:service}-${opt:stage, self:provider.stage}-images"
-            - "arn:aws:s3:::${self:service}-${opt:stage, self:provider.stage}-public/*"
-            - "arn:aws:s3:::${self:service}-${opt:stage, self:provider.stage}-public"
+            - "arn:aws:s3:::${self:service}-${opt:stage, self:provider.stage}-images/*"
+            - "arn:aws:s3:::${self:service}-${opt:stage, self:provider.stage}-cache"
+            - "arn:aws:s3:::${self:service}-${opt:stage, self:provider.stage}-cache/*"
+
+        # SQS Permissions
         - Effect: Allow
           Action:
             - sqs:SendMessage
@@ -45,10 +52,23 @@ provider:
             - sqs:DeleteMessage
             - sqs:GetQueueAttributes
           Resource:
-            # Referenciando o ARN diretamente pela saída do CloudFormation
             - Fn::GetAtt: [ProcessingQueue, Arn]
+            - Fn::GetAtt: [ProcessingDeadLetterQueue, Arn]
+
+        # DynamoDB Permissions
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
             - Fn::GetAtt: [ImageMetadataTable, Arn]
             - Fn::GetAtt: [ProcessingJobsTable, Arn]
+            - Fn::Sub: "${ImageMetadataTable.Arn}/index/*"
+            - Fn::Sub: "${ProcessingJobsTable.Arn}/index/*"
 
 package:
   patterns:
@@ -68,92 +88,165 @@ functions:
   web:
     handler: public/index.php
     runtime: php-82-fpm
-    timeout: 28
+    layers:
+      - ${bref-extra:imagick-php-82}
+    timeout: 28 # Abaixo do limite do API Gateway
+    memorySize: 512 # Mantém baixo para API
     events:
       - httpApi: "*"
+    environment:
+      FUNCTION_NAME: web
+      CLOUDFRONT_DOMAIN:
+        Fn::GetAtt: [CloudFrontDistribution, DomainName]
 
   artisan:
     handler: artisan
     runtime: php-82-console
     timeout: 720
+    memorySize: 512 # Mantém baixo se não for usado
+    # Descomente quando precisar de scheduled tasks
     # events:
     #   - schedule:
-    #       rate: rate(1 minute)
+    #       rate: rate(5 minutes)
     #       input: '"schedule:run"'
 
-  # Seguindo exatamente o padrão da documentação para o worker SQS
   worker:
     handler: artisan
     runtime: php-82-console
-    timeout: 300
+    timeout: 300 # 5 minutos para processamento
+    memorySize: 1024 # Um pouco mais para processamento de imagem
     events:
       - sqs:
           arn:
-            Fn::GetAtt:
-              - ProcessingQueue
-              - Arn
-          batchSize: 1
+            Fn::GetAtt: [ProcessingQueue, Arn]
+          batchSize: 1 # Processa uma imagem por vez
     environment:
       FUNCTION_NAME: worker
+      QUEUE_CONNECTION: sqs
 
 plugins:
   - ./vendor/bref/bref
+  - ./vendor/bref/extra-php-extensions
 
 resources:
   Resources:
-    # Definindo a fila de processamento
+    # Fila principal de processamento
     ProcessingQueue:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: ${self:service}-${opt:stage, self:provider.stage}-queue
-        VisibilityTimeout: 300
+        VisibilityTimeout: 330 # Pouco maior que o timeout do worker
+        MessageRetentionPeriod: 345600 # 4 dias
         RedrivePolicy:
           deadLetterTargetArn:
-            Fn::GetAtt:
-              - ProcessingDeadLetterQueue
-              - Arn
+            Fn::GetAtt: [ProcessingDeadLetterQueue, Arn]
           maxReceiveCount: 3
 
-    # Fila de mensagens com falha
+    # Fila para mensagens com falha
     ProcessingDeadLetterQueue:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: ${self:service}-${opt:stage, self:provider.stage}-dlq
-        MessageRetentionPeriod: 1209600
+        MessageRetentionPeriod: 1209600 # 14 dias
 
-    # Bucket de imagens
+    # Bucket para imagens originais
     ImageBucket:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: ${self:service}-${opt:stage, self:provider.stage}-images
+        LifecycleConfiguration:
+          Rules:
+            - Id: DeleteOldUploads
+              Status: Enabled
+              ExpirationInDays: 30 # Remove após 30 dias para economizar
+              NoncurrentVersionExpirationInDays: 7
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+
+    # Bucket para imagens processadas (cache)
+    CacheBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:service}-${opt:stage, self:provider.stage}-cache
+        LifecycleConfiguration:
+          Rules:
+            - Id: DeleteOldCache
+              Status: Enabled
+              ExpirationInDays: 90 # Cache por 90 dias
+              NoncurrentVersionExpirationInDays: 1
         CorsConfiguration:
           CorsRules:
             - AllowedHeaders: ["*"]
-              AllowedMethods: [GET, PUT, POST, DELETE, HEAD]
+              AllowedMethods: [GET, PUT, HEAD]
               AllowedOrigins: ["*"]
+              MaxAge: 3600
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+          BlockPublicPolicy: false
+          IgnorePublicAcls: false
+          RestrictPublicBuckets: false
 
-    # Tabelas do DynamoDB
+    # Política para permitir acesso público ao bucket de cache
+    CacheBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket:
+          Ref: CacheBucket
+        PolicyDocument:
+          Statement:
+            - Sid: PublicReadGetObject
+              Effect: Allow
+              Principal: "*"
+              Action:
+                - s3:GetObject
+              Resource:
+                Fn::Sub: "${CacheBucket.Arn}/*"
+
+    # Tabela para metadados das imagens
     ImageMetadataTable:
       Type: AWS::DynamoDB::Table
       Properties:
         TableName: ${self:service}-${opt:stage, self:provider.stage}-metadata
-        BillingMode: PAY_PER_REQUEST
+        BillingMode: PAY_PER_REQUEST # Sem custos fixos
         AttributeDefinitions:
           - AttributeName: image_id
+            AttributeType: S
+          - AttributeName: user_id
+            AttributeType: S
+          - AttributeName: created_at
             AttributeType: S
         KeySchema:
           - AttributeName: image_id
             KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: user_id-created_at-index
+            KeySchema:
+              - AttributeName: user_id
+                KeyType: HASH
+              - AttributeName: created_at
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        PointInTimeRecoverySpecification:
+          PointInTimeRecoveryEnabled: false # Desabilitado para economizar
 
+    # Tabela para jobs de processamento
     ProcessingJobsTable:
       Type: AWS::DynamoDB::Table
       Properties:
         TableName: ${self:service}-${opt:stage, self:provider.stage}-jobs
-        BillingMode: PAY_PER_REQUEST
+        BillingMode: PAY_PER_REQUEST # Sem custos fixos
         AttributeDefinitions:
           - AttributeName: job_id
             AttributeType: S
           - AttributeName: image_id
+            AttributeType: S
+          - AttributeName: status
+            AttributeType: S
+          - AttributeName: created_at
             AttributeType: S
         KeySchema:
           - AttributeName: job_id
@@ -165,32 +258,110 @@ resources:
                 KeyType: HASH
             Projection:
               ProjectionType: ALL
+          - IndexName: status-created_at-index
+            KeySchema:
+              - AttributeName: status
+                KeyType: HASH
+              - AttributeName: created_at
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        PointInTimeRecoverySpecification:
+          PointInTimeRecoveryEnabled: false # Desabilitado para economizar
 
-    # Bucket público
-    PublicBucket:
-      Type: AWS::S3::Bucket
+    CloudFrontDistribution:
+      Type: AWS::CloudFront::Distribution
       Properties:
-        BucketName: ${self:service}-${opt:stage, self:provider.stage}-public
-        # Remova a WebsiteConfiguration
-        CorsConfiguration:
-          CorsRules:
-            - AllowedHeaders: ["*"]
-              AllowedMethods: [GET, PUT, POST, DELETE, HEAD]
-              AllowedOrigins: ["*"]
+        DistributionConfig:
+          Enabled: true
+          PriceClass: PriceClass_100 # Apenas América do Norte e Europa para custo baixo no MVP
+          Origins:
+            # Origem para o bucket de cache
+            - Id: S3Cache
+              DomainName:
+                Fn::GetAtt: [CacheBucket, RegionalDomainName]
+              S3OriginConfig:
+                OriginAccessIdentity: ""
+            # Origem para API existente
+            - Id: ImageProcessingAPI
+              DomainName:
+                Fn::Sub: "${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+              OriginPath: "/${opt:stage, self:provider.stage}"
+              CustomOriginConfig:
+                HTTPPort: 80
+                HTTPSPort: 443
+                OriginProtocolPolicy: https-only
+          DefaultCacheBehavior:
+            TargetOriginId: S3Cache
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            ForwardedValues:
+              QueryString: true # Para permitir parâmetros de transformação
+              Cookies:
+                Forward: none
+            Compress: true
+            DefaultTTL: 86400 # 1 dia
+            MaxTTL: 31536000 # 1 ano
+          # Comportamento especial para URLs de processamento
+          CacheBehaviors:
+            - PathPattern: "/v1/image/*"
+              TargetOriginId: ImageProcessingAPI
+              ViewerProtocolPolicy: redirect-to-https
+              AllowedMethods:
+                - GET
+                - HEAD
+                - OPTIONS
+              CachedMethods:
+                - GET
+                - HEAD
+                - OPTIONS
+              ForwardedValues:
+                QueryString: true
+                Cookies:
+                  Forward: none
+              Compress: true
+              DefaultTTL: 86400 # 1 dia
 
-  # Outputs para facilitar o acesso aos recursos
+  # Outputs úteis
   Outputs:
+    ApiEndpoint:
+      Description: "API Gateway endpoint URL"
+      Value:
+        Fn::Sub: "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+
     ProcessingQueueUrl:
       Description: "URL of the SQS Queue"
       Value:
         Ref: ProcessingQueue
+
     ProcessingQueueArn:
       Description: "ARN of the SQS Queue"
       Value:
-        Fn::GetAtt:
-          - ProcessingQueue
-          - Arn
-    PublicBucketName:
-      Description: "Name of the public S3 bucket"
+        Fn::GetAtt: [ProcessingQueue, Arn]
+
+    ImageBucketName:
+      Description: "Name of the images S3 bucket"
       Value:
-        Ref: PublicBucket
+        Ref: ImageBucket
+
+    CacheBucketName:
+      Description: "Name of the cache S3 bucket"
+      Value:
+        Ref: CacheBucket
+
+    CacheBucketUrl:
+      Description: "URL to access cached images"
+      Value:
+        Fn::Sub: "https://${CacheBucket}.s3.${AWS::Region}.amazonaws.com"
+
+    CloudFrontURL:
+      Description: "URL da distribuição CloudFront"
+      Value:
+        Fn::GetAtt: [CloudFrontDistribution, DomainName]

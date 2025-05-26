@@ -12,6 +12,7 @@
         "php": "^8.2",
         "aws/aws-sdk-php": "^3.343",
         "bref/bref": "^2.4",
+        "bref/extra-php-extensions": "^1.8",
         "bref/laravel-bridge": "^2.5",
         "intervention/image": "^3.11",
         "laravel/framework": "^12.0",
