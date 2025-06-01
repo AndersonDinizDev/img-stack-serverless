@@ -2,72 +2,43 @@
 
 namespace App\Http\Services;
 
-use Illuminate\Support\Facades\Log;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Encoders\JpegEncoder;
 use Intervention\Image\Encoders\PngEncoder;
 use Intervention\Image\Encoders\WebpEncoder;
-use Illuminate\Support\Str;
+use App\Http\Services\StorageService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 
 class ImageProcessingService
 {
-    private $storage;
 
-    public function __construct(StorageService $storage)
-    {
-        $this->storage = $storage;
-    }
     /**
-     * Salva a imagem no disco e retorna o caminho
+     * Processa a imagem recebida e redireciona para o cache da imagem processada
      * @param object $data
-     * @return array
+     * @return array|RedirectResponse
      * @throws \Exception
      */
-    public function processImage(object $data): array
+    public function processImage(object $data): JsonResponse | RedirectResponse
     {
-        $file = $data->file('file');
-        $imageId = (string) Str::uuid();
-        $format = $data->input('format', $file->extension());
-        $originalPath = "original/{$imageId}.{$format}";
-        $cloudFrontDomain = env('CLOUDFRONT_DOMAIN');
+        $cacheKey = md5($data->url . json_encode($data->all()));
+        $cachePath = "{$cacheKey}.{$data->format}";
 
-        $params = [
-            'format' => $format,
-            'quality' => $data->quality ?? 80,
-            'width' => $data->width,
-            'height' => $data->height,
-            'transform' => $data->transform
-        ];
 
         try {
-            $this->storage->saveFile('s3', $originalPath, $file);
+            if (StorageService::searchFile('s3_cache', $cachePath)) {
+                return redirect()->to(StorageService::getUrl('s3_cache', $cachePath));
+            };
         } catch (\Exception $e) {
-            Log::error($e->getMessage());
             throw new \RuntimeException($e->getMessage());
         }
 
-        try {
-            $image = $this->transformImage($file, $params);
-        } catch (\Exception $e) {
-            Log::error($e->getMessage());
-            throw new \RuntimeException($e->getMessage());
-        }
-
-        try {
-            $cachePath = "processed/{$imageId}/{$params['width']}x{$params['height']}_q{$params['quality']}.{$format}";
-            $imageCache = $this->storage->saveFile('s3_cache', $cachePath, $image);
-        } catch (\Exception $e) {
-            Log::error($e->getMessage());
-            throw new \RuntimeException($e->getMessage());
-        }
-
-        return [
-            'urls' => [
-                'cloudfront' => "https://{$cloudFrontDomain}/{$cachePath}",
-                'dynamic' => "https://{$cloudFrontDomain}/v1/image/image_id={$imageId}?width={$params['width']}&height={$params['height']}&quality={$params['quality']}&format={$format}"
-            ]
-        ];
+        return response()->json([
+            'key' => $cacheKey,
+            'path' => $cachePath
+        ]);
     }
+
 
     /**
      * Modifica a imagem conforme a solicitação
@@ -92,7 +63,6 @@ class ImageProcessingService
 
             return $image->encode($encoder);
         } catch (\Exception $e) {
-            Log::error($e->getMessage());
             throw new \RuntimeException($e->getMessage());
         }
     }

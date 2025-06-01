@@ -5,33 +5,28 @@ provider:
   runtime: php-82-fpm
   region: us-east-1
   stage: ${opt:stage, 'dev'}
-
-  # Otimizações de custo
-  memorySize: 512 # Reduzido para MVP
-  timeout: 30 # Timeout padrão
-
+  memorySize: 512
+  timeout: 30
   environment:
     APP_ENV: production
     SESSION_DRIVER: cookie
     LOG_CHANNEL: stderr
-    APP_DEBUG: true
+    APP_DEBUG: false
     FILESYSTEM_DRIVER: s3
     FILESYSTEM_DRIVER_PUBLIC: s3
-    # Buckets
-    AWS_BUCKET: ${self:service}-${opt:stage, self:provider.stage}-images
     AWS_BUCKET_CACHE: ${self:service}-${opt:stage, self:provider.stage}-cache
-    # SQS
     SQS_QUEUE: ${self:service}-${opt:stage, self:provider.stage}-queue
     SQS_PREFIX:
       Fn::Sub: "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}"
-    # DynamoDB
     DYNAMODB_METADATA_TABLE: ${self:service}-${opt:stage, self:provider.stage}-metadata
     DYNAMODB_JOBS_TABLE: ${self:service}-${opt:stage, self:provider.stage}-jobs
-
+    CLOUDFRONT_DOMAIN:
+      Fn::GetAtt: [CloudFrontDistribution, DomainName]
+    CLOUDFRONT_PRIVATE_KEY: ${ssm:/img-stack/cloudfront-private-key}
+    CLOUDFRONT_KEY_PAIR_ID: ${ssm:/img-stack/cloudfront-key-pair-id}
   iam:
     role:
       statements:
-        # S3 Permissions
         - Effect: Allow
           Action:
             - s3:PutObject
@@ -39,12 +34,8 @@ provider:
             - s3:DeleteObject
             - s3:ListBucket
           Resource:
-            - "arn:aws:s3:::${self:service}-${opt:stage, self:provider.stage}-images"
-            - "arn:aws:s3:::${self:service}-${opt:stage, self:provider.stage}-images/*"
             - "arn:aws:s3:::${self:service}-${opt:stage, self:provider.stage}-cache"
             - "arn:aws:s3:::${self:service}-${opt:stage, self:provider.stage}-cache/*"
-
-        # SQS Permissions
         - Effect: Allow
           Action:
             - sqs:SendMessage
@@ -54,8 +45,6 @@ provider:
           Resource:
             - Fn::GetAtt: [ProcessingQueue, Arn]
             - Fn::GetAtt: [ProcessingDeadLetterQueue, Arn]
-
-        # DynamoDB Permissions
         - Effect: Allow
           Action:
             - dynamodb:Query
@@ -90,36 +79,29 @@ functions:
     runtime: php-82-fpm
     layers:
       - ${bref-extra:imagick-php-82}
-    timeout: 28 # Abaixo do limite do API Gateway
-    memorySize: 512 # Mantém baixo para API
+    timeout: 28
+    memorySize: 512
     events:
       - httpApi: "*"
     environment:
       FUNCTION_NAME: web
-      CLOUDFRONT_DOMAIN:
-        Fn::GetAtt: [CloudFrontDistribution, DomainName]
 
   artisan:
     handler: artisan
     runtime: php-82-console
     timeout: 720
-    memorySize: 512 # Mantém baixo se não for usado
-    # Descomente quando precisar de scheduled tasks
-    # events:
-    #   - schedule:
-    #       rate: rate(5 minutes)
-    #       input: '"schedule:run"'
+    memorySize: 512
 
   worker:
     handler: artisan
     runtime: php-82-console
-    timeout: 300 # 5 minutos para processamento
-    memorySize: 1024 # Um pouco mais para processamento de imagem
+    timeout: 300
+    memorySize: 1024
     events:
       - sqs:
           arn:
             Fn::GetAtt: [ProcessingQueue, Arn]
-          batchSize: 1 # Processa uma imagem por vez
+          batchSize: 1
     environment:
       FUNCTION_NAME: worker
       QUEUE_CONNECTION: sqs
@@ -130,43 +112,23 @@ plugins:
 
 resources:
   Resources:
-    # Fila principal de processamento
     ProcessingQueue:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: ${self:service}-${opt:stage, self:provider.stage}-queue
-        VisibilityTimeout: 330 # Pouco maior que o timeout do worker
-        MessageRetentionPeriod: 345600 # 4 dias
+        VisibilityTimeout: 330
+        MessageRetentionPeriod: 345600
         RedrivePolicy:
           deadLetterTargetArn:
             Fn::GetAtt: [ProcessingDeadLetterQueue, Arn]
           maxReceiveCount: 3
 
-    # Fila para mensagens com falha
     ProcessingDeadLetterQueue:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: ${self:service}-${opt:stage, self:provider.stage}-dlq
-        MessageRetentionPeriod: 1209600 # 14 dias
+        MessageRetentionPeriod: 1209600
 
-    # Bucket para imagens originais
-    ImageBucket:
-      Type: AWS::S3::Bucket
-      Properties:
-        BucketName: ${self:service}-${opt:stage, self:provider.stage}-images
-        LifecycleConfiguration:
-          Rules:
-            - Id: DeleteOldUploads
-              Status: Enabled
-              ExpirationInDays: 30 # Remove após 30 dias para economizar
-              NoncurrentVersionExpirationInDays: 7
-        PublicAccessBlockConfiguration:
-          BlockPublicAcls: true
-          BlockPublicPolicy: true
-          IgnorePublicAcls: true
-          RestrictPublicBuckets: true
-
-    # Bucket para imagens processadas (cache)
     CacheBucket:
       Type: AWS::S3::Bucket
       Properties:
@@ -175,7 +137,7 @@ resources:
           Rules:
             - Id: DeleteOldCache
               Status: Enabled
-              ExpirationInDays: 90 # Cache por 90 dias
+              ExpirationInDays: 90
               NoncurrentVersionExpirationInDays: 1
         CorsConfiguration:
           CorsRules:
@@ -183,34 +145,47 @@ resources:
               AllowedMethods: [GET, PUT, HEAD]
               AllowedOrigins: ["*"]
               MaxAge: 3600
-        PublicAccessBlockConfiguration:
-          BlockPublicAcls: false
-          BlockPublicPolicy: false
-          IgnorePublicAcls: false
-          RestrictPublicBuckets: false
 
-    # Política para permitir acesso público ao bucket de cache
+    CloudFrontOriginAccessControl:
+      Type: AWS::CloudFront::OriginAccessControl
+      Properties:
+        OriginAccessControlConfig:
+          Name: ${self:service}-${opt:stage, self:provider.stage}-oac
+          OriginAccessControlOriginType: s3
+          SigningBehavior: always
+          SigningProtocol: sigv4
+
     CacheBucketPolicy:
       Type: AWS::S3::BucketPolicy
       Properties:
-        Bucket:
-          Ref: CacheBucket
+        Bucket: !Ref CacheBucket
         PolicyDocument:
+          Version: "2012-10-17"
           Statement:
-            - Sid: PublicReadGetObject
+            - Sid: AllowCloudFrontServicePrincipal
               Effect: Allow
-              Principal: "*"
-              Action:
-                - s3:GetObject
-              Resource:
-                Fn::Sub: "${CacheBucket.Arn}/*"
+              Principal:
+                Service: cloudfront.amazonaws.com
+              Action: s3:GetObject
+              Resource: !Join ["", ["arn:aws:s3:::", !Ref CacheBucket, "/*"]]
+              Condition:
+                StringEquals:
+                  AWS:SourceArn:
+                    !Join [
+                      "",
+                      [
+                        "arn:aws:cloudfront::",
+                        !Ref AWS::AccountId,
+                        ":distribution/",
+                        !Ref CloudFrontDistribution,
+                      ],
+                    ]
 
-    # Tabela para metadados das imagens
     ImageMetadataTable:
       Type: AWS::DynamoDB::Table
       Properties:
         TableName: ${self:service}-${opt:stage, self:provider.stage}-metadata
-        BillingMode: PAY_PER_REQUEST # Sem custos fixos
+        BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
           - AttributeName: image_id
             AttributeType: S
@@ -231,14 +206,13 @@ resources:
             Projection:
               ProjectionType: ALL
         PointInTimeRecoverySpecification:
-          PointInTimeRecoveryEnabled: false # Desabilitado para economizar
+          PointInTimeRecoveryEnabled: false
 
-    # Tabela para jobs de processamento
     ProcessingJobsTable:
       Type: AWS::DynamoDB::Table
       Properties:
         TableName: ${self:service}-${opt:stage, self:provider.stage}-jobs
-        BillingMode: PAY_PER_REQUEST # Sem custos fixos
+        BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
           - AttributeName: job_id
             AttributeType: S
@@ -267,26 +241,25 @@ resources:
             Projection:
               ProjectionType: ALL
         PointInTimeRecoverySpecification:
-          PointInTimeRecoveryEnabled: false # Desabilitado para economizar
+          PointInTimeRecoveryEnabled: false
 
     CloudFrontDistribution:
       Type: AWS::CloudFront::Distribution
       Properties:
         DistributionConfig:
           Enabled: true
-          PriceClass: PriceClass_100 # Apenas América do Norte e Europa para custo baixo no MVP
+          PriceClass: PriceClass_100
           Origins:
-            # Origem para o bucket de cache
             - Id: S3Cache
               DomainName:
                 Fn::GetAtt: [CacheBucket, RegionalDomainName]
               S3OriginConfig:
                 OriginAccessIdentity: ""
-            # Origem para API existente
+              OriginAccessControlId: !Ref CloudFrontOriginAccessControl
             - Id: ImageProcessingAPI
               DomainName:
                 Fn::Sub: "${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
-              OriginPath: "/${opt:stage, self:provider.stage}"
+              OriginPath: ""
               CustomOriginConfig:
                 HTTPPort: 80
                 HTTPSPort: 443
@@ -303,15 +276,16 @@ resources:
               - HEAD
               - OPTIONS
             ForwardedValues:
-              QueryString: true # Para permitir parâmetros de transformação
+              QueryString: true
               Cookies:
                 Forward: none
             Compress: true
-            DefaultTTL: 86400 # 1 dia
-            MaxTTL: 31536000 # 1 ano
-          # Comportamento especial para URLs de processamento
+            DefaultTTL: 86400
+            MaxTTL: 31536000
+            TrustedKeyGroups:
+              - ${ssm:/img-stack/cloudfront-key-group-id}
           CacheBehaviors:
-            - PathPattern: "/v1/image/*"
+            - PathPattern: "/api/v1/image/*"
               TargetOriginId: ImageProcessingAPI
               ViewerProtocolPolicy: redirect-to-https
               AllowedMethods:
@@ -327,9 +301,8 @@ resources:
                 Cookies:
                   Forward: none
               Compress: true
-              DefaultTTL: 86400 # 1 dia
+              DefaultTTL: 86400
 
-  # Outputs úteis
   Outputs:
     ApiEndpoint:
       Description: "API Gateway endpoint URL"
@@ -345,11 +318,6 @@ resources:
       Description: "ARN of the SQS Queue"
       Value:
         Fn::GetAtt: [ProcessingQueue, Arn]
-
-    ImageBucketName:
-      Description: "Name of the images S3 bucket"
-      Value:
-        Ref: ImageBucket
 
     CacheBucketName:
       Description: "Name of the cache S3 bucket"

@@ -9,6 +9,5 @@ Route::get('/ping', function () {
 
 Route::prefix('v1/image')->group(function () {
 
-    Route::post('/', [ImageController::class, 'store']);
-    Route::get('/{image_id}', [ImageController::class, 'index']);
+    Route::get('/{id}', [ImageController::class, 'index']);
 });
