@@ -29,7 +29,7 @@ class ProcessImageRequest extends FormRequest
             'transform' => 'required|array|in:resize,crop,format,quality,auto',
             'width' => 'sometimes|integer|min:1|max:4096',
             'height' => 'sometimes|integer|min:1|max:4096',
-            'format' => 'sometimes|string|in:jpg,jpeg,png,webp',
+            'format' => 'required|string|in:jpg,jpeg,png,webp',
             'quality' => 'sometimes|integer|min:1|max:100'
         ];
     }
@@ -37,6 +37,7 @@ class ProcessImageRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'format.required' => 'O campo format é obrigatório',
             'transform.required' => 'O campo transform é obrigatório.',
             'transform.array' => 'O campo transform precisa ser um array.',
             'image.required' => 'O campo image é obrigatório.',

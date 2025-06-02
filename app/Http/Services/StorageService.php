@@ -43,12 +43,12 @@ class StorageService
     }
 
     /**
-     * Retorna a url do objeto
+     * Retorna a url assinada do objeto
      * @param string $disk
      * @param string $path
      * @return string
      */
-    public static function getUrl(string $disk, string $path): string
+    public static function getSignerUrl(string $disk, string $path): string
     {
         $cloudFront = new UrlSigner(env('CLOUDFRONT_KEY_PAIR_ID'), env('CLOUDFRONT_PRIVATE_KEY'));
         $resourceUrl = "https://" . env('CLOUDFRONT_DOMAIN') . "/{$path}";
@@ -59,5 +59,16 @@ class StorageService
         }
 
         return $url;
+    }
+
+    public static function getFile(string $disk, string $path): string
+    {
+        try {
+            $file = Storage::disk($disk)->get($path);
+        } catch (\Exception $e) {
+            throw new \RuntimeException($e->getMessage());
+        }
+
+        return $file;
     }
 }

@@ -21,45 +21,60 @@ class ImageProcessingService
      */
     public function processImage(object $data): JsonResponse | RedirectResponse
     {
-        $cacheKey = md5($data->url . json_encode($data->all()));
+        $file = file_get_contents($data->image);
+        $cacheKey = md5($data->image . json_encode($data->all()));
         $cachePath = "{$cacheKey}.{$data->format}";
 
 
         try {
             if (StorageService::searchFile('s3_cache', $cachePath)) {
-                return redirect()->to(StorageService::getUrl('s3_cache', $cachePath));
+                return redirect()->to(StorageService::getSignerUrl('s3_cache', $cachePath));
             };
         } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage());
         }
 
-        return response()->json([
-            'key' => $cacheKey,
-            'path' => $cachePath
-        ]);
+
+        try {
+            $imageProcessed = $this->transformImage($file, $data);
+        } catch (\Exception $e) {
+            throw new \RuntimeException($e->getMessage());
+        }
+
+
+        try {
+            if (StorageService::saveFile('s3_cache', $cachePath, $imageProcessed)) {
+                $imageLink = StorageService::getSignerUrl('s3_cache', $cachePath);
+            }
+        } catch (\Exception $e) {
+            throw new \RuntimeException($e->getMessage());
+        }
+
+        return redirect()->to($imageLink);
     }
 
 
     /**
      * Modifica a imagem conforme a solicitação
-     * @param object $file
-     * @param array $params
+     * @param object $data
      * @return object
      * @throws \Exception
      */
-    private function transformImage(object $file, array $params)
+    private function transformImage($file, object $data)
     {
         try {
             $image = ImageManager::imagick()->read($file);
 
-            if ($params['transform'] == 'resize') {
-                $image->resize($params['width'], $params['height'], function ($constraint) {
-                    $constraint->aspectRatio();
-                    $constraint->upsize();
-                });
+            foreach ($data->transform as $type) {
+                if ($type == 'resize') {
+                    $image->resize($data->width, $data->height, function ($constraint) {
+                        $constraint->aspectRatio();
+                        $constraint->upsize();
+                    });
+                }
             }
 
-            $encoder = $this->selectFormatEncoder($params['format'], $params['quality'] ?? 80);
+            $encoder = $this->selectFormatEncoder($data->format, $data->quality ?? 80);
 
             return $image->encode($encoder);
         } catch (\Exception $e) {
