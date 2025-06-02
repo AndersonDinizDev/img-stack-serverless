@@ -34,5 +34,30 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'aws' => [
+        'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+        'credentials' => [
+            'key' => env('APP_ENV') === 'local'
+                ? env('AWS_ACCESS_KEY_ID_LOCAL', 'local')
+                : env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('APP_ENV') === 'local'
+                ? env('AWS_SECRET_ACCESS_KEY_LOCAL', 'local')
+                : env('AWS_SECRET_ACCESS_KEY'),
+        ],
+    ],
+
+    'dynamodb' => [
+        'endpoint' => env('APP_ENV') === 'local'
+            ? env('DYNAMODB_ENDPOINT', 'http://dynamodb:8000')
+            : null,
+        'tables' => [
+            'metadata' => env('APP_ENV') === 'local'
+                ? 'local-metadata'
+                : env('DYNAMODB_METADATA_TABLE', 'img-stack-dev-metadata'),
+            'jobs' => env('APP_ENV') === 'local'
+                ? 'local-jobs'
+                : env('DYNAMODB_JOBS_TABLE', 'img-stack-dev-jobs'),
+        ],
+    ],
 
 ];
