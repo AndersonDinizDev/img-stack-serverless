@@ -65,13 +65,11 @@ class ImageProcessingService
         try {
             $image = ImageManager::imagick()->read($file);
 
-            foreach ($data->transform as $type) {
-                if ($type == 'resize') {
-                    $image->resize($data->width, $data->height, function ($constraint) {
-                        $constraint->aspectRatio();
-                        $constraint->upsize();
-                    });
-                }
+            if ($data->transform == 'resize') {
+                $image->resize($data->width, $data->height, function ($constraint) {
+                    $constraint->aspectRatio();
+                    $constraint->upsize();
+                });
             }
 
             $encoder = $this->selectFormatEncoder($data->format, $data->quality ?? 80);

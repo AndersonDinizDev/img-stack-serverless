@@ -26,9 +26,9 @@ class ProcessImageRequest extends FormRequest
     {
         return [
             'image' => 'required|url',
-            'transform' => 'required|array|in:resize,crop,quality,auto',
-            'width' => 'sometimes|integer|min:1|max:4096|required_if:transform,resize',
-            'height' => 'sometimes|integer|min:1|max:4096|required_if:transform,resize',
+            'transform' => 'required|string|in:resize,crop,quality,auto',
+            'width' => 'integer|min:1|max:4096|required_if:transform,resize',
+            'height' => 'integer|min:1|max:4096|required_if:transform,resize',
             'format' => 'required|string|in:jpg,jpeg,png,webp',
             'quality' => 'sometimes|integer|min:1|max:100'
         ];
