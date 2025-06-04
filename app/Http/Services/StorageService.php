@@ -44,11 +44,10 @@ class StorageService
 
     /**
      * Retorna a url assinada do objeto
-     * @param string $disk
      * @param string $path
      * @return string
      */
-    public static function getSignerUrl(string $disk, string $path): string
+    public static function getSignerUrl(string $path): string
     {
         $cloudFront = new UrlSigner(env('CLOUDFRONT_KEY_PAIR_ID'), env('CLOUDFRONT_PRIVATE_KEY'));
         $resourceUrl = "https://" . env('CLOUDFRONT_DOMAIN') . "/{$path}";
