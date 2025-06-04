@@ -24,6 +24,11 @@ provider:
       Fn::GetAtt: [CloudFrontDistribution, DomainName]
     CLOUDFRONT_PRIVATE_KEY: ${ssm:/img-stack/cloudfront-private-key}
     CLOUDFRONT_KEY_PAIR_ID: ${ssm:/img-stack/cloudfront-key-pair-id}
+    SQS_QUEUE_URL:
+      Fn::Sub: "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/${self:service}-${opt:stage, self:provider.stage}-queue"
+    SKELETON_ENABLED: true
+    ASYNC_PROCESSING_ENABLED: true
+    QUEUE_CONNECTION: sqs
   iam:
     role:
       statements:
@@ -86,25 +91,22 @@ functions:
     environment:
       FUNCTION_NAME: web
 
-  artisan:
-    handler: artisan
-    runtime: php-82-console
-    timeout: 720
-    memorySize: 512
-
   worker:
-    handler: artisan
-    runtime: php-82-console
+    handler: Bref\LaravelBridge\Queue\QueueHandler
+    runtime: php-82
     timeout: 300
     memorySize: 1024
+    layers:
+      - ${bref-extra:imagick-php-82}
     events:
       - sqs:
-          arn:
-            Fn::GetAtt: [ProcessingQueue, Arn]
+          arn: !GetAtt ProcessingQueue.Arn
           batchSize: 1
     environment:
       FUNCTION_NAME: worker
       QUEUE_CONNECTION: sqs
+      SQS_QUEUE: !Ref ProcessingQueue
+      SQS_PREFIX: !Sub "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}"
 
 plugins:
   - ./vendor/bref/bref
@@ -222,6 +224,10 @@ resources:
             AttributeType: S
           - AttributeName: created_at
             AttributeType: S
+          - AttributeName: cache_key
+            AttributeType: S
+          - AttributeName: updated_at
+            AttributeType: N
         KeySchema:
           - AttributeName: job_id
             KeyType: HASH
@@ -237,6 +243,14 @@ resources:
               - AttributeName: status
                 KeyType: HASH
               - AttributeName: created_at
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: cache_key-updated_at-index
+            KeySchema:
+              - AttributeName: cache_key
+                KeyType: HASH
+              - AttributeName: updated_at
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL

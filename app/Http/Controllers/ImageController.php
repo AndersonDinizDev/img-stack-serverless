@@ -6,7 +6,7 @@ use App\Http\Requests\ProcessImageRequest;
 use App\Http\Services\ImageProcessingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Illuminate\Http\Response;
 
 class ImageController extends Controller
 {
@@ -17,7 +17,7 @@ class ImageController extends Controller
         $this->imgService = $imgService;
     }
 
-    public function index(ProcessImageRequest $request): JsonResponse | RedirectResponse
+    public function index(ProcessImageRequest $request): JsonResponse | RedirectResponse | Response
     {
 
         try {
