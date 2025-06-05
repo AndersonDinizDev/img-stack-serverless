@@ -15,14 +15,17 @@
     </script>
     <script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4="
         crossorigin="anonymous"></script>
-    <title>Document</title>
+    <title>Teste</title>
+
+    <style>
+    </style>
 </head>
 
 <body>
     <main class="container">
         <div class="row min-vh-100 align-items-center">
-            <div id="card-container" class="bg-light shadow-sm col d-flex gap-1">
-                {{-- Javascript loading --}}
+            <div id="card-container" class="bg-light shadow-sm col d-flex gap-3 flex-wrap">
+                <!-- Cards serão inseridos aqui via JavaScript -->
             </div>
         </div>
     </main>
@@ -44,27 +47,32 @@
                 height: '200',
                 quality: '100',
                 transform: 'resize',
-                format: 'webp'
+                format: 'jpeg'
             }
         }
 
-        state.images.forEach(function(item, index) {
-            let image = `
-        <div key="${index}" class="card mx-2 mb-4" style="width: 18rem;">
-                <object data="${state.api}?image=${item}&width=${state.config.width}&height=${state.config.height}&quality=${state.config.quality}&skeleton=${state.config.skeleton}&transform=${state.config.transform}&format=${state.config.format}"
-                       class="card-img-top"></object>
-            <div class="card-body">
-                <h5 class="card-title">Título do Card</h5>
-                <p class="card-text">
-                    Lorem ipsum, dolor sit amet consectetur adipisicing elit. Magnam odit ipsa
-                    error alias similique illum odio, provident obcaecati asperiores pariatur voluptas dolores
-                    incidunt vero tempore quam ex. Atque, expedita quis?
-                </p>
-                <a href="#" class="btn btn-primary">Teste</a>
-            </div>
-        </div>`;
+        function createCard(item, index) {
+            const imageUrl =
+                `${state.api}?image=${item}&width=${state.config.width}&height=${state.config.height}&quality=${state.config.quality}&skeleton=${state.config.skeleton}&transform=${state.config.transform}&format=${state.config.format}`;
 
-            state.cardContainer.append(image);
+            return `
+            <div>
+                        <object data="${imageUrl}"
+                               class="card-img-top" width="300px" height="200px">
+                        </object>
+            </div>
+            `;
+        }
+
+        function renderCards() {
+            state.images.forEach(function(item, index) {
+                const cardHtml = createCard(item, index);
+                state.cardContainer.append(cardHtml);
+            });
+        }
+
+        $(document).ready(() => {
+            renderCards();
         });
     </script>
 </body>

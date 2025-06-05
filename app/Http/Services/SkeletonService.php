@@ -271,25 +271,7 @@ HTML;
             // Tentativa múltipla de criar o elemento img
             let img = null;
 
-            // Método 1: createElement padrão
-            try {
-                img = document.createElement('img');
-            } catch (e) {
-                console.warn('Method 1 failed:', e);
-            }
 
-            // Método 2: usando innerHTML como fallback
-            if (!img || typeof img.style === 'undefined') {
-                try {
-                    const container = document.createElement('div');
-                    container.innerHTML = '<img>';
-                    img = container.firstChild;
-                } catch (e) {
-                    console.warn('Method 2 failed:', e);
-                }
-            }
-
-            // Método 3: usando new Image() como último recurso
             if (!img || typeof img.style === 'undefined') {
                 try {
                     img = new Image();
@@ -312,15 +294,9 @@ HTML;
                 if (img.style) {
                     img.style.width = '{$width}px';
                     img.style.height = '{$height}px';
-                    img.style.objectFit = 'cover';
-                    img.style.borderRadius = '8px';
                     img.style.opacity = '0';
                     img.style.transition = 'opacity 0.8s ease-in-out';
                 }
-
-                // Definir atributos como fallback
-                img.setAttribute('width', '{$width}');
-                img.setAttribute('height', '{$height}');
 
             } catch (error) {
                 console.error('Error setting image properties:', error);
