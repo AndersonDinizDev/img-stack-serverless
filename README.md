@@ -2,7 +2,7 @@
 
 ## Descrição
 
-IMG-STACK é um serviço serverless inteligente para processamento de imagens em tempo real na AWS. Combina processamento síncrono e assíncrono com sistema de skeleton loading, oferecendo redimensionamento, cortes, filtros e otimização automática sem necessidade de pré-processamento.
+IMG-STACK é um serviço serverless inteligente para processamento de imagens em tempo real totalmente em serverless. Combina processamento síncrono e assíncrono com sistema de skeleton loading, oferecendo redimensionamento, cortes, filtros e otimização automática sem necessidade de pré-processamento.
 
 ### Características Principais
 
