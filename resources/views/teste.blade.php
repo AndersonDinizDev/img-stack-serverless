@@ -33,7 +33,7 @@
     <script>
         const state = {
             cardContainer: $("#card-container"),
-            api: "https://djajm5gr6kx3e.cloudfront.net/api/v1/image",
+            api: "https://dzy9qlgb7cwht.cloudfront.net/api/v1/image",
             images: [
                 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg',
                 'https://images.pexels.com/photos/1438761/pexels-photo-1438761.jpeg',
