@@ -18,47 +18,6 @@ services:
     volumes:
       - ./:/var/www/html
       - ./docker/local/php/local.ini:/usr/local/etc/php/conf.d/local.ini
-    depends_on:
-      - redis
-      - dynamodb
-
-  redis:
-    image: redis:latest
-    container_name: img_stack_redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redisdata:/data
-    networks:
-      - img_stack_network
-
-  dynamodb:
-    image: amazon/dynamodb-local
-    command: "-jar DynamoDBLocal.jar -sharedDb"
-    container_name: img_stack_dynamodb
-    ports:
-      - "8000:8000"
-    networks:
-      - img_stack_network
-    volumes:
-      - dynamodbdata:/home/dynamodblocal/data
-
-  dynamodb-admin:
-    image: aaronshaf/dynamodb-admin
-    container_name: img_stack_dynamodb_admin
-    ports:
-      - "8001:8001"
-    environment:
-      - DYNAMO_ENDPOINT=http://dynamodb:8000
-      - DYNAMODB_ENDPOINT=http://dynamodb:8000
-      - AWS_DYNAMODB_ENDPOINT=http://dynamodb:8000
-      - AWS_REGION=${AWS_REGION_LOCAL}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID_LOCAL}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_LOCAL}
-    networks:
-      - img_stack_network
-    depends_on:
-      - dynamodb
 
   node:
     image: node:latest
@@ -82,7 +41,3 @@ services:
 networks:
   img_stack_network:
     driver: bridge
-
-volumes:
-  redisdata:
-  dynamodbdata:

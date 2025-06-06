@@ -14,7 +14,7 @@ up:
 
 down:
 	@echo "\033[0;34m↻\033[0m Parando containers..."
-	@docker-compose -f ${DC} down
+	@docker-compose -f ${DC} down --volumes
 	@echo "\033[0;32m✓\033[0m Containers parados com sucesso!"
 
 stop:

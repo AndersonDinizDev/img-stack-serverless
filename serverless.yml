@@ -299,7 +299,7 @@ resources:
             TrustedKeyGroups:
               - ${ssm:/img-stack/cloudfront-key-group-id}
           CacheBehaviors:
-            - PathPattern: "/api/v1/image/*"
+            - PathPattern: "/api/v1/image"
               TargetOriginId: ImageProcessingAPI
               ViewerProtocolPolicy: redirect-to-https
               AllowedMethods:
