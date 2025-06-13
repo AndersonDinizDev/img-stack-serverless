@@ -10,25 +10,23 @@ use Illuminate\Http\Response;
 
 class ImageController extends Controller
 {
-    private $imgService;
 
-    public function __construct(ImageProcessingService $imgService)
+    public function __construct(private ImageProcessingService $imgService)
     {
         $this->imgService = $imgService;
     }
 
-    public function index(ProcessImageRequest $request): JsonResponse | RedirectResponse | Response
+    public function index(ProcessImageRequest $request): JsonResponse
     {
-
         try {
             $imageData = $this->imgService->processImage($request);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Erro ao processar a imagem: ' . $e->getMessage()
+                'message' => 'Erro ao processar a imagem'
             ], 500);
         }
 
-        return $imageData;
+        return response()->json($imageData);
     }
 }
