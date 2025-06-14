@@ -84,14 +84,14 @@
             {url: 'https://images.pexels.com/photos/1438761/pexels-photo-1438761.jpeg', title: 'Paisagem 2'},
             {url: 'https://images.pexels.com/photos/3225531/pexels-photo-3225531.jpeg', title: 'Paisagem 3'},
             {url: 'https://images.pexels.com/photos/1680140/pexels-photo-1680140.jpeg', title: 'Paisagem 4'},
-            {url: 'https://images.pexels.com/photos/2253275/pexels-photo-2253275.jpeg', title: 'Paisagem 5'}
+            {url: 'https://images.pexels.com/photos/2253275/pexels-photo-2253275.jpeg', title: 'Paisagem 5'},
+            {url: 'https://images.pexels.com/photos/1563356/pexels-photo-1563356.jpeg', title: 'Paisagem 6'}
         ],
         params: {
-            width: 150,
-            height: 150,
-            format: 'jpeg',
-            quality: 100,
-            transform: 'resize'
+            r_w: 375,
+            r_h: 375,
+            i_f: 'jpeg',
+            i_q: 100
         }
     };
 
@@ -119,7 +119,7 @@
                         <div class="card-body real-body d-none">
                             <h5 class="card-title fs-6">${imageData.title}</h5>
                             <p class="card-text text-muted small">
-                                ${params.width}x${params.height} • ${params.format.toUpperCase()}
+                                ${params.r_w}x${params.r_h} • ${params.i_f.toUpperCase()}
                             </p>
                         </div>
                     </div>

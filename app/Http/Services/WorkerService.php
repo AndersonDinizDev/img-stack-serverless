@@ -36,11 +36,10 @@ class WorkerService
                 'cache_key' => $cacheKey,
                 'image_url' => $data->image,
                 'transformations' => [
-                    'width' => $data->width ?? null,
-                    'height' => $data->height ?? null,
-                    'format' => $data->format ?? 'webp',
-                    'quality' => $data->quality ?? 80,
-                    'transform' => $data->transform ?? 'resize'
+                    'width' => $data->r_w ?? null,
+                    'height' => $data->r_h ?? null,
+                    'format' => $data->i_f ?? 'jpeg',
+                    'quality' => $data->i_q ?? 80
                 ],
                 'options' => [
                     'ai_analysis' => $data->ai_analysis ?? false,

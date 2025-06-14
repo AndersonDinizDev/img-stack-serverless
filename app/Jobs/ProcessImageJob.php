@@ -20,7 +20,7 @@ class ProcessImageJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $tries = 3;
-    public $timeout = 290;
+    public $timeout = 180;
 
     protected $jobData;
 
@@ -80,7 +80,7 @@ class ProcessImageJob implements ShouldQueue
         }
 
         $encoder = $this->selectFormatEncoder(
-            $transformations['format'] ?? 'webp',
+            $transformations['format'] ?? 'jpeg',
             $transformations['quality'] ?? 80
         );
 
@@ -91,9 +91,8 @@ class ProcessImageJob implements ShouldQueue
     {
         return match ($format) {
             'png' => new PngEncoder(),
-            'jpeg' => new JpegEncoder(quality: $quality),
             'webp' => new WebpEncoder(quality: $quality),
-            default => new WebpEncoder(quality: $quality)
+            default => new JpegEncoder(quality: $quality)
         };
     }
 }

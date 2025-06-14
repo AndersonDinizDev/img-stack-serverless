@@ -2,6 +2,7 @@
 
 namespace App\Http\Services;
 
+use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
@@ -18,16 +19,16 @@ class ImageProcessingService
      * Processa imagem de forma assíncrona
      * @param object $data
      * @return array
+     * @throws Exception
      */
     public function processImage(object $data): array
     {
         $cacheKeyParams = [
             'image' => $data->image,
-            'width' => $data->width ?? null,
-            'height' => $data->height ?? null,
-            'format' => $data->format ?? 'webp',
-            'quality' => $data->quality ?? 80,
-            'transform' => $data->transform ?? 'resize'
+            'width' => $data->r_w ?? null,
+            'height' => $data->r_h ?? null,
+            'format' => $data->i_f ?? 'webp',
+            'quality' => $data->i_q ?? 80
         ];
 
         $cacheKey = md5(json_encode($cacheKeyParams));
@@ -42,11 +43,12 @@ class ImageProcessingService
                     'url' => $signedUrl
                 ];
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error("Erro ao verificar cache S3", [
                 'cache_key' => $cacheKey,
                 'error' => $e->getMessage()
             ]);
+            throw $e;
         }
 
         $jobStatus = $this->workerService->getJobStatus($cacheKey);
