@@ -2,7 +2,9 @@
 
 ## Descrição
 
-IMG-STACK é um serviço serverless inteligente para processamento de imagens em tempo real totalmente em serverless. Combina processamento síncrono e assíncrono com sistema de skeleton loading, oferecendo redimensionamento, cortes, filtros e otimização automática sem necessidade de pré-processamento.
+IMG-STACK é um serviço serverless inteligente para processamento de imagens em tempo real totalmente em serverless.
+Combina processamento síncrono e assíncrono com sistema de skeleton loading, oferecendo redimensionamento, cortes,
+filtros e otimização automática sem necessidade de pré-processamento.
 
 ### Características Principais
 
@@ -25,11 +27,13 @@ IMG-STACK é um serviço serverless inteligente para processamento de imagens em
 ### Fluxo de Processamento
 
 #### Processamento Síncrono (rápido)
+
 ```
 Request → Cache Check → Transform → S3 → CloudFront URL → Redirect
 ```
 
 #### Processamento Assíncrono (complexo)
+
 ```
 Request → Cache Check → Queue Job → Generate Skeleton → Return SVG
          ↓
@@ -56,12 +60,12 @@ Skeleton JS polls → Detects completion → Replaces with real image
 - **Docker** - versão 20.10 ou superior
 - **Docker Compose** - versão 2.0 ou superior
 - **Conta AWS** com as seguintes permissões:
-  - Lambda (criação e execução)
-  - S3 (buckets e objetos)
-  - CloudFront (distribuições e chaves)
-  - DynamoDB (tabelas e índices)
-  - SQS (filas)
-  - IAM (roles e políticas)
+    - Lambda (criação e execução)
+    - S3 (buckets e objetos)
+    - CloudFront (distribuições e chaves)
+    - DynamoDB (tabelas e índices)
+    - SQS (filas)
+    - IAM (roles e políticas)
 - **Make** (opcional, mas recomendado)
 
 ## Instalação
@@ -104,20 +108,31 @@ APP_DEBUG=false
 
 ```
 
+### Parâmetros da Requisição
+
+| Comando | Descrição                         |
+|---------|-----------------------------------|
+| `r_w`   | Largura da imagem                 |
+| `w_h`   | Altura da imagem                  |
+| `i_f`   | Formato da imagem                 |
+| `i_q`   | Qualidade da imagem               |
+| `image` | URL da imagem que deseja utilizar |
+
 ### CloudFront - Configuração de Chaves Privadas
 
 Para URLs assinadas, configure no console AWS:
 
 1. **Acesse CloudFront** → [Console AWS](https://console.aws.amazon.com/cloudfront/)
 2. **Crie um Key Group**:
-   - Gere um par de chaves RSA-2048
-   - Adicione a chave pública ao Key Group
-   - Configure a chave privada no ambiente
+    - Gere um par de chaves RSA-2048
+    - Adicione a chave pública ao Key Group
+    - Configure a chave privada no ambiente
 3. **Configure a Distribuição**:
-   - Associe o Key Group à distribuição
-   - Configure comportamentos de cache
+    - Associe o Key Group à distribuição
+    - Configure comportamentos de cache
 
-**Documentação oficial**: [Trusted Signers](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-trusted-signers.html)
+**Documentação oficial
+**: [Trusted Signers](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-trusted-signers.html)
 
 ## Deploy
 
@@ -156,17 +171,20 @@ serverless logs --function web --stage prod --tail
 ### Recursos Criados Automaticamente
 
 #### Lambda Functions
+
 - **web**: API HTTP principal (timeout: 28s)
 - **worker**: Processamento assíncrono (timeout: 300s, RAM: 1GB)
 
 #### Armazenamento
+
 - **S3 Bucket**: Cache de imagens com lifecycle policy (90 dias)
-- **DynamoDB**: 
-  - Tabela principal para metadata
-  - GSI para queries por status
-  - TTL automático
+- **DynamoDB**:
+    - Tabela principal para metadata
+    - GSI para queries por status
+    - TTL automático
 
 #### Rede e Distribuição
+
 - **CloudFront**: CDN global com cache inteligente
 - **SQS**: Fila principal + Dead Letter Queue
 - **IAM Roles**: Permissões mínimas necessárias
@@ -182,29 +200,29 @@ serverless logs --function web --stage prod --tail
 
 ### Desenvolvimento
 
-| Comando | Descrição |
-|---------|-----------|
-| `make up` | Inicia ambiente de desenvolvimento |
-| `make down` | Para serviços e remove volumes |
-| `make build` | Reconstrói imagens Docker |
-| `make logs` | Logs em tempo real |
-| `make restart` | Reinicia todos os serviços |
+| Comando        | Descrição                          |
+|----------------|------------------------------------|
+| `make up`      | Inicia ambiente de desenvolvimento |
+| `make down`    | Para serviços e remove volumes     |
+| `make build`   | Reconstrói imagens Docker          |
+| `make logs`    | Logs em tempo real                 |
+| `make restart` | Reinicia todos os serviços         |
 
 ### Containers
 
-| Comando | Descrição |
-|---------|-----------|
-| `make app-bash` | Acessa container Laravel |
+| Comando          | Descrição                |
+|------------------|--------------------------|
+| `make app-bash`  | Acessa container Laravel |
 | `make node-bash` | Acessa container Node.js |
 
 ### Deploy
 
-| Comando | Descrição |
-|---------|-----------|
-| `make deploy-dev` | Deploy para desenvolvimento |
-| `make deploy-prod` | Deploy para produção |
-| `make remove-dev` | Remove stack de desenvolvimento |
-| `make remove-prod` | Remove stack de produção |
+| Comando            | Descrição                       |
+|--------------------|---------------------------------|
+| `make deploy-dev`  | Deploy para desenvolvimento     |
+| `make deploy-prod` | Deploy para produção            |
+| `make remove-dev`  | Remove stack de desenvolvimento |
+| `make remove-prod` | Remove stack de produção        |
 
 ### AWS
 
@@ -244,10 +262,10 @@ make test
 curl "http://dominio.cloudfront.com/v1/image?url=https://example.com/image.jpg&w=300&h=200&f=webp&t=resize"
 ```
 
-
 ### Problemas Comuns
 
 #### Deploy falha
+
 ```bash
 # Verificar permissões IAM
 aws iam get-user
@@ -260,6 +278,7 @@ serverless deploy --verbose --stage dev
 ```
 
 #### Processamento lento
+
 ```bash
 # Verificar worker Lambda
 aws lambda get-function --function-name img-stack-prod-worker
@@ -272,6 +291,7 @@ php artisan queue:retry all
 ```
 
 #### Cache não funciona
+
 ```bash
 # Verificar S3
 aws s3 ls s3://img-stack-cache/

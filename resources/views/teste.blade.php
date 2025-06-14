@@ -88,8 +88,8 @@
             {url: 'https://images.pexels.com/photos/1563356/pexels-photo-1563356.jpeg', title: 'Paisagem 6'}
         ],
         params: {
-            r_w: 375,
-            r_h: 375,
+            r_w: 875,
+            r_h: 875,
             i_f: 'webp',
             i_q: 100
         }
