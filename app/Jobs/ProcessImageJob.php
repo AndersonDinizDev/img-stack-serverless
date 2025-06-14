@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -14,22 +15,26 @@ use Intervention\Image\Encoders\JpegEncoder;
 use Intervention\Image\Encoders\PngEncoder;
 use Intervention\Image\Encoders\WebpEncoder;
 use Illuminate\Support\Facades\Log;
+use Intervention\Image\Interfaces\EncodedImageInterface;
 
 class ProcessImageJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $tries = 3;
-    public $timeout = 290;
+    public int $tries = 3;
+    public int $timeout = 180;
 
-    protected $jobData;
+    protected array $jobData;
 
     public function __construct(array $jobData)
     {
         $this->jobData = $jobData;
     }
 
-    public function handle()
+    /**
+     * @throws Exception
+     */
+    public function handle(): void
     {
         $workerService = new WorkerService();
         $jobId = $this->jobData['job_id'];
@@ -41,7 +46,7 @@ class ProcessImageJob implements ShouldQueue
             $imageContent = file_get_contents($this->jobData['image_url']);
 
             if (!$imageContent) {
-                throw new \Exception('Failed to download image');
+                throw new Exception('Failed to download image');
             }
             $workerService->updateJobProgress($jobId, 50);
 
@@ -50,12 +55,12 @@ class ProcessImageJob implements ShouldQueue
 
             $cachePath = $cacheKey . '.' . $this->jobData['transformations']['format'];
             if (!StorageService::saveFile('s3_cache', $cachePath, $processedImage)) {
-                throw new \Exception('Failed to save processed image');
+                throw new Exception('Failed to save processed image');
             }
 
             $workerService->saveJobStatus($cacheKey, $jobId, 'completed', 100);
             Log::info("Job completed successfully: {$jobId}");
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error("Job failed: {$e->getMessage()}", [
                 'job_id' => $jobId,
                 'error' => $e->getMessage()
@@ -66,7 +71,13 @@ class ProcessImageJob implements ShouldQueue
         }
     }
 
-    private function transformImage($imageContent, array $transformations)
+    /**
+     * Aplica as transformações na imagem conforma os parâmetros recebidos
+     * @param $imageContent
+     * @param array $transformations
+     * @return EncodedImageInterface
+     */
+    private function transformImage($imageContent, array $transformations): EncodedImageInterface
     {
         $image = ImageManager::imagick()->read($imageContent);
 
@@ -80,20 +91,25 @@ class ProcessImageJob implements ShouldQueue
         }
 
         $encoder = $this->selectFormatEncoder(
-            $transformations['format'] ?? 'webp',
+            $transformations['format'] ?? 'jpeg',
             $transformations['quality'] ?? 80
         );
 
         return $image->encode($encoder);
     }
 
-    private function selectFormatEncoder(string $format, int $quality = 80)
+    /**
+     * Define o formato da imagem
+     * @param string $format
+     * @param int $quality
+     * @return PngEncoder|WebpEncoder|JpegEncoder
+     */
+    private function selectFormatEncoder(string $format, int $quality = 80): PngEncoder|WebpEncoder|JpegEncoder
     {
         return match ($format) {
             'png' => new PngEncoder(),
-            'jpeg' => new JpegEncoder(quality: $quality),
             'webp' => new WebpEncoder(quality: $quality),
-            default => new WebpEncoder(quality: $quality)
+            default => new JpegEncoder(quality: $quality)
         };
     }
 }

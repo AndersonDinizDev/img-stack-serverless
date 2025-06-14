@@ -26,32 +26,28 @@ class ProcessImageRequest extends FormRequest
     {
         return [
             'image' => 'required|url',
-            'transform' => 'required|string|in:resize,crop,quality,auto',
-            'width' => 'integer|min:1|max:4096|required_if:transform,resize',
-            'height' => 'integer|min:1|max:4096|required_if:transform,resize',
-            'format' => 'required|string|in:jpg,jpeg,png,webp',
-            'quality' => 'sometimes|integer|min:1|max:100'
+            'r_w' => 'integer|min:1|max:4096|required_if:transform,resize',
+            'r_h' => 'integer|min:1|max:4096|required_if:transform,resize',
+            'i_f' => 'required|string|in:jpg,jpeg,png,webp',
+            'i_q' => 'sometimes|integer|min:1|max:100'
         ];
     }
 
     public function messages(): array
     {
         return [
-            'width.required_if' => 'O campo width é obrigatório, pois resize foi definido no campo transform',
-            'height.required_if' => 'O campo width é obrigatório, pois resize foi definido no campo transform',
-            'format.required' => 'O campo format é obrigatório',
-            'transform.required' => 'O campo transform é obrigatório.',
-            'transform.array' => 'O campo transform precisa ser um array.',
+            'r_w.required_if' => 'O campo width é obrigatório, pois resize foi definido no campo transform',
+            'r_h.required_if' => 'O campo width é obrigatório, pois resize foi definido no campo transform',
+            'i_f.required' => 'O campo format é obrigatório',
             'image.required' => 'O campo image é obrigatório.',
             'image.url' => 'O campo image precisa ser uma URL válida',
-            'transform.in' => 'A transformação deve ser uma das seguintes: resize, crop, format, quality, auto.',
-            'width.min' => 'A largura deve ser no mínimo :min pixels.',
-            'width.max' => 'A largura deve ser no máximo :max pixels.',
-            'height.min' => 'A altura deve ser no mínimo :min pixels.',
-            'height.max' => 'A altura deve ser no máximo :max pixels.',
-            'format.in' => 'O formato deve ser um dos seguintes: jpg, jpeg, png, webp.',
-            'quality.min' => 'A qualidade deve ser no mínimo :min%.',
-            'quality.max' => 'A qualidade deve ser no máximo :max%.',
+            'r_w.min' => 'A largura deve ser no mínimo :min pixels.',
+            'r_w.max' => 'A largura deve ser no máximo :max pixels.',
+            'r_h.min' => 'A altura deve ser no mínimo :min pixels.',
+            'r_h.max' => 'A altura deve ser no máximo :max pixels.',
+            'i_f.in' => 'O formato deve ser um dos seguintes: jpg, jpeg, png, webp.',
+            'i_q.min' => 'A qualidade deve ser no mínimo :min%.',
+            'i_q.max' => 'A qualidade deve ser no máximo :max%.',
         ];
     }
 

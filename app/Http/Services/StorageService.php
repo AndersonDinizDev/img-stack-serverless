@@ -8,13 +8,13 @@ use Aws\CloudFront\UrlSigner;
 class StorageService
 {
     /**
-     * Salva o arquivo em um disco específico
+     * Salva o arquivo num disco específico
      * @param string $disk
      * @param string $path
      * @param mixed $file
      * @return bool
      */
-    public static function saveFile(string $disk, string $path, $file): bool
+    public static function saveFile(string $disk, string $path, mixed $file): bool
     {
         try {
             $save = Storage::disk($disk)->put($path, $file);
@@ -60,6 +60,12 @@ class StorageService
         return $url;
     }
 
+    /**
+     * Retorna um arquivo de um disco específico
+     * @param string $disk
+     * @param string $path
+     * @return string
+     */
     public static function getFile(string $disk, string $path): string
     {
         try {
