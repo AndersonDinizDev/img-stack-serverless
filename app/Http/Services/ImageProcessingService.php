@@ -35,7 +35,7 @@ class ImageProcessingService
         $cachePath = "{$cacheKey}.{$cacheKeyParams['format']}";
 
         try {
-            if (StorageService::searchFile('s4', $cachePath)) {
+            if (StorageService::searchFile('s3_cache', $cachePath)) {
                 $signedUrl = StorageService::getSignerUrl($cachePath);
 
                 return [
@@ -54,8 +54,16 @@ class ImageProcessingService
         $jobStatus = $this->workerService->getJobStatus($cacheKey);
 
         if ($jobStatus === null || $jobStatus === 'failed') {
-            $this->workerService->dispatchImageProcessing($data, $cacheKey);
-            $jobStatus = 'queued';
+            try {
+                $this->workerService->dispatchImageProcessing($data, $cacheKey);
+                $jobStatus = 'queued';
+            } catch (Exception $e) {
+                Log::error("Erro ao processar imagem", [
+                    'cache_key' => $cacheKey,
+                    'error' => $e->getMessage()
+                ]);
+                throw $e;
+            }
         }
 
         return [

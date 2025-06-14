@@ -90,7 +90,7 @@
         params: {
             r_w: 375,
             r_h: 375,
-            i_f: 'jpeg',
+            i_f: 'webp',
             i_q: 100
         }
     };
@@ -158,7 +158,6 @@
                     }
                 } catch (error) {
                     console.error('Erro:', error);
-                    scheduleRetry(3000);
                 }
             }
 

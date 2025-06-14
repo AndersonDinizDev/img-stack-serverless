@@ -74,10 +74,10 @@ class WorkerService
      * Salva status do job no DynamoDB
      *
      * @param string $cacheKey
-     * @param string $joinId
+     * @param string $jobId
      * @param string $status
      * @param int $progress
-     * @param string $error
+     * @param string|null $error
      * @return bool
      */
     public function saveJobStatus(string $cacheKey, string $jobId, string $status, int $progress = 0, string $error = null): bool
@@ -193,7 +193,7 @@ class WorkerService
     /**
      * Limpa jobs antigos
      *
-     * @param int $dayOld
+     * @param int $daysOld
      * @return int
      */
     public function cleanupOldJobs(int $daysOld = 7): int
