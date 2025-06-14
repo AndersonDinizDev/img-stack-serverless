@@ -48,6 +48,7 @@ Skeleton JS polls → Detects completion → Replaces with real image
 - [Instalação](#instalação)
 - [Configuração](#configuração)
 - [Deploy](#deploy)
+- [Utilizando Aplicação](#utilizando-aplicação)
 - [Infraestrutura AWS](#infraestrutura-aws)
 - [Comandos Disponíveis](#comandos-disponíveis)
 - [Desenvolvimento](#desenvolvimento)
@@ -108,16 +109,6 @@ APP_DEBUG=false
 
 ```
 
-### Parâmetros da Requisição
-
-| Comando | Descrição                         |
-|---------|-----------------------------------|
-| `r_w`   | Largura da imagem                 |
-| `w_h`   | Altura da imagem                  |
-| `i_f`   | Formato da imagem                 |
-| `i_q`   | Qualidade da imagem               |
-| `image` | URL da imagem que deseja utilizar |
-
 ### CloudFront - Configuração de Chaves Privadas
 
 Para URLs assinadas, configure no console AWS:
@@ -165,6 +156,18 @@ serverless info --stage prod
 # Logs em tempo real
 serverless logs --function web --stage prod --tail
 ```
+
+## Utilizando Aplicação
+
+### Parâmetros da Requisição
+
+| Parâmetros | Descrição                         |
+|------------|-----------------------------------|
+| `r_w`      | Largura da imagem                 |
+| `w_h`      | Altura da imagem                  |
+| `i_f`      | Formato da imagem                 |
+| `i_q`      | Qualidade da imagem               |
+| `image`    | URL da imagem que deseja utilizar |
 
 ## Infraestrutura AWS
 
