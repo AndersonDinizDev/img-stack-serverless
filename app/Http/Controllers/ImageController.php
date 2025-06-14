@@ -22,8 +22,8 @@ class ImageController extends Controller
             $imageData = $this->imgService->processImage($request);
         } catch (\Exception $e) {
             return response()->json([
-                'status' => 'error',
-                'message' => 'Erro ao processar a imagem'
+                'status' => 'failed',
+                'message' => 'Ocorreu um problema ao processar a imagem. Tente novamente mais tarde'
             ], 500);
         }
 

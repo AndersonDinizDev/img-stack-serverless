@@ -35,7 +35,7 @@ class ImageProcessingService
         $cachePath = "{$cacheKey}.{$cacheKeyParams['format']}";
 
         try {
-            if (StorageService::searchFile('s3_cache', $cachePath)) {
+            if (StorageService::searchFile('s4', $cachePath)) {
                 $signedUrl = StorageService::getSignerUrl($cachePath);
 
                 return [
