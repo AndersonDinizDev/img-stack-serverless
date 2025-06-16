@@ -9,8 +9,6 @@ provider:
   timeout: 30
   environment:
     APP_ENV: production
-    SESSION_DRIVER: cookie
-    LOG_CHANNEL: stderr
     APP_DEBUG: false
     FILESYSTEM_DRIVER: s3
     FILESYSTEM_DRIVER_PUBLIC: s3
@@ -21,7 +19,7 @@ provider:
     DYNAMODB_METADATA_TABLE: ${self:service}-${opt:stage, self:provider.stage}-metadata
     DYNAMODB_JOBS_TABLE: ${self:service}-${opt:stage, self:provider.stage}-jobs
     CLOUDFRONT_DOMAIN:
-      Fn::GetAtt: [CloudFrontDistribution, DomainName]
+      Fn::GetAtt: [ CloudFrontDistribution, DomainName ]
     CLOUDFRONT_PRIVATE_KEY: ${ssm:/img-stack/cloudfront-private-key}
     CLOUDFRONT_KEY_PAIR_ID: ${ssm:/img-stack/cloudfront-key-pair-id}
     SQS_QUEUE_URL:
@@ -29,6 +27,10 @@ provider:
     SKELETON_ENABLED: true
     ASYNC_PROCESSING_ENABLED: true
     QUEUE_CONNECTION: sqs
+    VIEW_COMPILED_PATH: /tmp/storage/framework/views
+    CACHE_DRIVER: array
+    LOG_CHANNEL: stderr
+    SESSION_DRIVER: array
   iam:
     role:
       statements:
@@ -48,8 +50,8 @@ provider:
             - sqs:DeleteMessage
             - sqs:GetQueueAttributes
           Resource:
-            - Fn::GetAtt: [ProcessingQueue, Arn]
-            - Fn::GetAtt: [ProcessingDeadLetterQueue, Arn]
+            - Fn::GetAtt: [ ProcessingQueue, Arn ]
+            - Fn::GetAtt: [ ProcessingDeadLetterQueue, Arn ]
         - Effect: Allow
           Action:
             - dynamodb:Query
@@ -59,10 +61,17 @@ provider:
             - dynamodb:UpdateItem
             - dynamodb:DeleteItem
           Resource:
-            - Fn::GetAtt: [ImageMetadataTable, Arn]
-            - Fn::GetAtt: [ProcessingJobsTable, Arn]
+            - Fn::GetAtt: [ ImageMetadataTable, Arn ]
+            - Fn::GetAtt: [ ProcessingJobsTable, Arn ]
             - Fn::Sub: "${ImageMetadataTable.Arn}/index/*"
             - Fn::Sub: "${ProcessingJobsTable.Arn}/index/*"
+        - Effect: Allow
+          Action:
+            - rekognition:DetectLabels
+            - rekognition:DetectFaces
+            - rekognition:DetectModerationLabels
+            - rekognition:DetectText
+          Resource: "*"
 
 package:
   patterns:
@@ -122,7 +131,7 @@ resources:
         MessageRetentionPeriod: 345600
         RedrivePolicy:
           deadLetterTargetArn:
-            Fn::GetAtt: [ProcessingDeadLetterQueue, Arn]
+            Fn::GetAtt: [ ProcessingDeadLetterQueue, Arn ]
           maxReceiveCount: 3
 
     ProcessingDeadLetterQueue:
@@ -143,9 +152,9 @@ resources:
               NoncurrentVersionExpirationInDays: 1
         CorsConfiguration:
           CorsRules:
-            - AllowedHeaders: ["*"]
-              AllowedMethods: [GET, PUT, HEAD]
-              AllowedOrigins: ["*"]
+            - AllowedHeaders: [ "*" ]
+              AllowedMethods: [ GET, PUT, HEAD ]
+              AllowedOrigins: [ "*" ]
               MaxAge: 3600
 
     CloudFrontOriginAccessControl:
@@ -169,7 +178,7 @@ resources:
               Principal:
                 Service: cloudfront.amazonaws.com
               Action: s3:GetObject
-              Resource: !Join ["", ["arn:aws:s3:::", !Ref CacheBucket, "/*"]]
+              Resource: !Join [ "", [ "arn:aws:s3:::", !Ref CacheBucket, "/*" ] ]
               Condition:
                 StringEquals:
                   AWS:SourceArn:
@@ -266,7 +275,7 @@ resources:
           Origins:
             - Id: S3Cache
               DomainName:
-                Fn::GetAtt: [CacheBucket, RegionalDomainName]
+                Fn::GetAtt: [ CacheBucket, RegionalDomainName ]
               S3OriginConfig:
                 OriginAccessIdentity: ""
               OriginAccessControlId: !Ref CloudFrontOriginAccessControl
@@ -331,7 +340,7 @@ resources:
     ProcessingQueueArn:
       Description: "ARN of the SQS Queue"
       Value:
-        Fn::GetAtt: [ProcessingQueue, Arn]
+        Fn::GetAtt: [ ProcessingQueue, Arn ]
 
     CacheBucketName:
       Description: "Name of the cache S3 bucket"
@@ -346,4 +355,4 @@ resources:
     CloudFrontURL:
       Description: "URL da distribuição CloudFront"
       Value:
-        Fn::GetAtt: [CloudFrontDistribution, DomainName]
+        Fn::GetAtt: [ CloudFrontDistribution, DomainName ]

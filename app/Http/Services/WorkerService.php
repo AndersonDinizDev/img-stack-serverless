@@ -8,17 +8,9 @@ use Illuminate\Support\Facades\Log;
 
 class WorkerService
 {
-    private DynamoDbClient $dynamodb;
-    private Marshaler $marshaler;
 
-    public function __construct()
+    public function __construct(private DynamoDbClient $dynamodb, private Marshaler $marshaler, private RekognitionService $rekognitionService)
     {
-        $this->dynamodb = new DynamoDbClient([
-            'version' => 'latest',
-            'region' => env('AWS_DEFAULT_REGION', 'us-east-1')
-        ]);
-
-        $this->marshaler = new Marshaler();
     }
 
     /**
@@ -42,12 +34,16 @@ class WorkerService
                     'quality' => $data->i_q ?? 80
                 ],
                 'options' => [
-                    'ai_analysis' => $data->ai_analysis ?? false,
-                    'smart_crop' => $data->smart_crop ?? false
+                    'ai_analysis' => $data->ai_analysis ?? true
                 ],
                 'created_at' => time(),
                 'attempts' => 0
             ];
+
+            if ($jobData['options']['ai_analysis']) {
+                $check = $this->rekognitionService->moderateImage($jobData['image_url']);
+                $jobData['image_check'] = $check;
+            }
 
             \App\Jobs\ProcessImageJob::dispatch($jobData);
 
