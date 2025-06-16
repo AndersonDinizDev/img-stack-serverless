@@ -34,9 +34,8 @@ class ProcessImageJob implements ShouldQueue
     /**
      * @throws Exception
      */
-    public function handle(): void
+    public function handle(WorkerService $workerService): void
     {
-        $workerService = new WorkerService();
         $jobId = $this->jobData['job_id'];
         $cacheKey = $this->jobData['cache_key'];
 
@@ -50,7 +49,7 @@ class ProcessImageJob implements ShouldQueue
             }
             $workerService->updateJobProgress($jobId, 50);
 
-            $processedImage = $this->transformImage($imageContent, $this->jobData['transformations']);
+            $processedImage = $this->transformImage($imageContent, $this->jobData['transformations'], $this->jobData['image_check']);;
             $workerService->updateJobProgress($jobId, 80);
 
             $cachePath = $cacheKey . '.' . $this->jobData['transformations']['format'];
@@ -77,7 +76,7 @@ class ProcessImageJob implements ShouldQueue
      * @param array $transformations
      * @return EncodedImageInterface
      */
-    private function transformImage($imageContent, array $transformations): EncodedImageInterface
+    private function transformImage($imageContent, array $transformations, array $imageCheck): EncodedImageInterface
     {
         $image = ImageManager::imagick()->read($imageContent);
 
@@ -88,6 +87,10 @@ class ProcessImageJob implements ShouldQueue
                 $constraint->aspectRatio();
                 $constraint->upsize();
             });
+        }
+
+        if ($imageCheck['is_safe'] === false) {
+            $image->blur(50);
         }
 
         $encoder = $this->selectFormatEncoder(

@@ -12,7 +12,6 @@ class ImageProcessingService
 {
     public function __construct(private WorkerService $workerService)
     {
-        $this->workerService = new WorkerService();
     }
 
     /**

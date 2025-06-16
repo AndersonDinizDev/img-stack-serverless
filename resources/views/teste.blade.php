@@ -81,15 +81,19 @@
         apiUrl: 'https://dzy9qlgb7cwht.cloudfront.net/api/v1/image',
         images: [
             {url: 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg', title: 'Paisagem 1'},
-            {url: 'https://images.pexels.com/photos/1438761/pexels-photo-1438761.jpeg', title: 'Paisagem 2'},
-            {url: 'https://images.pexels.com/photos/3225531/pexels-photo-3225531.jpeg', title: 'Paisagem 3'},
-            {url: 'https://images.pexels.com/photos/1680140/pexels-photo-1680140.jpeg', title: 'Paisagem 4'},
-            {url: 'https://images.pexels.com/photos/2253275/pexels-photo-2253275.jpeg', title: 'Paisagem 5'},
-            {url: 'https://images.pexels.com/photos/1563356/pexels-photo-1563356.jpeg', title: 'Paisagem 6'}
+            {
+                url: 'https://media.imperatriz.ma.gov.br/svVaYVi2TBR-sEZaFveY8tJ4wzQ=/750x0/novo.imperatriz.ma.gov.br/media/site/content/article/WhatsApp_Image_2023-12-01_at_08.59.29.jpeg',
+                title: 'Paisagem 2'
+            }
+            // {url: 'https://images.pexels.com/photos/1438761/pexels-photo-1438761.jpeg', title: 'Paisagem 2'},
+            // {url: 'https://images.pexels.com/photos/3225531/pexels-photo-3225531.jpeg', title: 'Paisagem 3'},
+            // {url: 'https://images.pexels.com/photos/1680140/pexels-photo-1680140.jpeg', title: 'Paisagem 4'},
+            // {url: 'https://images.pexels.com/photos/2253275/pexels-photo-2253275.jpeg', title: 'Paisagem 5'},
+            // {url: 'https://images.pexels.com/photos/1563356/pexels-photo-1563356.jpeg', title: 'Paisagem 6'}
         ],
         params: {
-            r_w: 875,
-            r_h: 875,
+            r_w: 750,
+            r_h: 750,
             i_f: 'webp',
             i_q: 100
         }
