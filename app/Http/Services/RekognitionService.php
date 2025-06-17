@@ -20,7 +20,7 @@ class RekognitionService
      * @param mixed $image
      * @return array
      */
-    public function moderateImage(mixed $image): array
+    public function detectModeration(mixed $image): array
     {
         try {
             $checkImage = $this->rekognitionClient->detectModerationLabels([
@@ -45,6 +45,42 @@ class RekognitionService
         return [
             'is_safe' => false,
             'labels' => $result
+        ];
+    }
+
+    /**
+     * Detecta faces na imagem fornecida.
+     *
+     * @param mixed $image
+     * @return array
+     */
+    public function detectFaces(mixed $image): array
+    {
+        try {
+            $checkImage = $this->rekognitionClient->detectFaces([
+                'Image' => [
+                    'Bytes' => file_get_contents($image),
+                ],
+            ]);
+        } catch (AwsException $e) {
+            Log::error($e->getMessage());
+        }
+
+        $result = $checkImage->get('FaceDetails');
+
+        if (!$result) {
+            return [
+                'is_face' => false,
+            ];
+        }
+
+        $labels = array_map(function ($face) {
+            return $face['BoundingBox'];
+        }, $result);
+
+        return [
+            'is_face' => true,
+            'labels' => $labels,
         ];
     }
 }

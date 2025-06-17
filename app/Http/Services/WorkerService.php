@@ -34,14 +34,19 @@ class WorkerService
                     'quality' => $data->i_q ?? 80
                 ],
                 'options' => [
-                    'ai_analysis' => $data->ai_analysis ?? true
+                    'ai_analysis' => $data->ai ?? null
                 ],
                 'created_at' => time(),
                 'attempts' => 0
             ];
 
             if ($jobData['options']['ai_analysis']) {
-                $check = $this->rekognitionService->moderateImage($jobData['image_url']);
+
+                match ($jobData['options']['ai_analysis']) {
+                    'faces' => $check = $this->rekognitionService->detectFaces($jobData['image_url']),
+                    default => $check = $this->rekognitionService->detectModeration($jobData['image_url'])
+                };
+
                 $jobData['image_check'] = $check;
             }
 
