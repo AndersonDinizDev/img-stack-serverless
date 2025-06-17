@@ -1,9 +1,9 @@
 DC=docker-compose-local.yml
 
 .PHONY: up down build restart logs stop start \
-        app-bash node-bash \
-        deploy-prod deploy-dev info-dev info-prod remove-prod remove-dev \
-        git-save
+		app-bash node-bash \
+		deploy-prod deploy-dev info-dev info-prod remove-prod remove-dev \
+		git-save test
 
 ## Comandos docker-compose
 
