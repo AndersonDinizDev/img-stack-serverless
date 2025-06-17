@@ -3,13 +3,12 @@
 ## Descrição
 
 IMG-STACK é um serviço serverless inteligente para processamento de imagens em tempo real totalmente em serverless.
-Combina processamento síncrono e assíncrono com sistema de skeleton loading, oferecendo redimensionamento, cortes,
-filtros e otimização automática sem necessidade de pré-processamento.
+Oferecendo redimensionamento, cortes, filtros, analise com IA e otimização automática sem necessidade de
+pré-processamento.
 
 ### Características Principais
 
 - **Processamento Inteligente**: Decisão automática entre processamento síncrono e assíncrono
-- **Skeleton Loading**: UX otimizada com placeholders animados durante processamento
 - **Cache Inteligente**: Sistema de cache baseado em conteúdo com TTL automático
 - **Arquitetura Serverless**: Escalabilidade automática usando AWS Lambda
 - **URLs Assinadas**: Segurança através do CloudFront com chaves privadas
@@ -19,27 +18,20 @@ filtros e otimização automática sem necessidade de pré-processamento.
 ### Componentes Principais
 
 - **ImageProcessingService**: Orquestrador que decide estratégia de processamento
-- **SkeletonService**: Gera placeholders SVG animados com detecção automática de tipo
 - **WorkerService**: Gerencia jobs assíncronos via SQS e DynamoDB
 - **ProcessImageJob**: Worker Lambda para processamento pesado
 - **StorageService**: Abstração para S3 e CloudFront
 
 ### Fluxo de Processamento
 
-#### Processamento Síncrono (rápido)
+#### Processamento Assíncrono
 
 ```
-Request → Cache Check → Transform → S3 → CloudFront URL → Redirect
-```
-
-#### Processamento Assíncrono (complexo)
-
-```
-Request → Cache Check → Queue Job → Generate Skeleton → Return SVG
+Requisição → Verificar Cache na S3 → Adiciona à Fila → Retorna Informação `Retry-After`
          ↓
-SQS Queue → Worker Lambda → Process → S3 → Update Status
+SQS Queue → Lambda Worker → Processa a Imagem → Salva Cache na S3 → Atualiza o Status
          ↓
-Skeleton JS polls → Detects completion → Replaces with real image
+Verifica se Finalizou → Retorna a Imagem Processada
 ```
 
 ## Índice
@@ -121,6 +113,29 @@ Para URLs assinadas, configure no console AWS:
 3. **Configure a Distribuição**:
     - Associe o Key Group à distribuição
     - Configure comportamentos de cache
+4. **Adicione as chaves na AWS SSM para uso no serverless.yml**:
+    ```
+   aws ssm put-parameter \
+    --name "/img-stack/cloudfront-key-group-id" \
+    --value "Sua key group aqui" \
+    --type "String" \
+    --description "Sua descrição aqui." \
+    --overwrite
+   
+    aws ssm put-parameter \
+    --name "/img-stack/cloudfront-key-pair-id" \
+    --value "Sua key pair aqui" \
+    --type "String" \
+    --description "Sua descrição aqui." \
+    --overwrite
+   
+    aws ssm put-parameter \
+    --name "/img-stack/cloudfront-private-key" \
+    --value "Sua private key aqui" \
+    --type "String" \
+    --description "Sua descrição aqui." \
+    --overwrite
+   ```
 
 **Documentação oficial
 **: [Trusted Signers](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-trusted-signers.html)
@@ -161,13 +176,14 @@ serverless logs --function web --stage prod --tail
 
 ### Parâmetros da Requisição
 
-| Parâmetros | Descrição                         |
-|------------|-----------------------------------|
-| `r_w`      | Largura da imagem                 |
-| `w_h`      | Altura da imagem                  |
-| `i_f`      | Formato da imagem                 |
-| `i_q`      | Qualidade da imagem               |
-| `image`    | URL da imagem que deseja utilizar |
+| Parâmetros | Descrição                                                       |
+|------------|-----------------------------------------------------------------|
+| `r_w`      | Largura da imagem                                               |
+| `w_h`      | Altura da imagem                                                |
+| `i_f`      | Formato da imagem                                               |
+| `i_q`      | Qualidade da imagem                                             |
+| `image`    | URL da imagem que deseja utilizar                               |
+| `ai`       | Utilizar analise de IA para verificar imagens de teor impróprio |
 
 ## Infraestrutura AWS
 

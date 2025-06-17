@@ -84,16 +84,15 @@
             {
                 url: 'https://media.imperatriz.ma.gov.br/svVaYVi2TBR-sEZaFveY8tJ4wzQ=/750x0/novo.imperatriz.ma.gov.br/media/site/content/article/WhatsApp_Image_2023-12-01_at_08.59.29.jpeg',
                 title: 'Paisagem 2'
-            }
-            // {url: 'https://images.pexels.com/photos/1438761/pexels-photo-1438761.jpeg', title: 'Paisagem 2'},
-            // {url: 'https://images.pexels.com/photos/3225531/pexels-photo-3225531.jpeg', title: 'Paisagem 3'},
-            // {url: 'https://images.pexels.com/photos/1680140/pexels-photo-1680140.jpeg', title: 'Paisagem 4'},
-            // {url: 'https://images.pexels.com/photos/2253275/pexels-photo-2253275.jpeg', title: 'Paisagem 5'},
-            // {url: 'https://images.pexels.com/photos/1563356/pexels-photo-1563356.jpeg', title: 'Paisagem 6'}
+            },
+            {url: 'https://img.cdndsgni.com/preview/10210688.jpg', title: 'Paisagem 3'},
+            {url: 'https://images.pexels.com/photos/1680140/pexels-photo-1680140.jpeg', title: 'Paisagem 4'},
+            {url: 'https://images.pexels.com/photos/2253275/pexels-photo-2253275.jpeg', title: 'Paisagem 5'},
+            {url: 'https://images.pexels.com/photos/1563356/pexels-photo-1563356.jpeg', title: 'Paisagem 6'}
         ],
         params: {
-            r_w: 750,
-            r_h: 750,
+            r_w: 1920,
+            r_h: 1080,
             i_f: 'webp',
             i_q: 100
         }
@@ -114,7 +113,7 @@
                                 <span class="spinner-border spinner-border-sm me-1"></span>
                                 Processando
                             </span>
-                            <img class="card-img-top w-100 h-100 object-fit-cover" alt="${imageData.title}">
+                            <img class="card-img-top w-100 h-100" alt="${imageData.title}">
                         </div>
                         <div class="card-body skeleton-body">
                             <div class="skeleton-line rounded mb-2 w-75"></div>
@@ -142,8 +141,7 @@
             async function loadImage() {
                 const queryParams = $.param({
                     ...params,
-                    image: imageData.url,
-                    response: 'json'
+                    image: imageData.url
                 });
 
                 try {

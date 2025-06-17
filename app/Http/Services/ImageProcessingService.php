@@ -3,9 +3,6 @@
 namespace App\Http\Services;
 
 use Exception;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 
 class ImageProcessingService
@@ -27,7 +24,8 @@ class ImageProcessingService
             'width' => $data->r_w ?? null,
             'height' => $data->r_h ?? null,
             'format' => $data->i_f ?? 'webp',
-            'quality' => $data->i_q ?? 80
+            'quality' => $data->i_q ?? 80,
+            'ai_analysis' => $data->ai ?? null,
         ];
 
         $cacheKey = md5(json_encode($cacheKeyParams));

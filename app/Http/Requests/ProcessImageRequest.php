@@ -29,7 +29,8 @@ class ProcessImageRequest extends FormRequest
             'r_w' => 'integer|min:1|max:4096|required_if:transform,resize',
             'r_h' => 'integer|min:1|max:4096|required_if:transform,resize',
             'i_f' => 'required|string|in:jpg,jpeg,png,webp',
-            'i_q' => 'sometimes|integer|min:1|max:100'
+            'i_q' => 'sometimes|integer|min:1|max:100',
+            'ai' => 'sometimes|in:faces,safe',
         ];
     }
 
@@ -48,6 +49,7 @@ class ProcessImageRequest extends FormRequest
             'i_f.in' => 'O formato deve ser um dos seguintes: jpg, jpeg, png, webp.',
             'i_q.min' => 'A qualidade deve ser no mínimo :min%.',
             'i_q.max' => 'A qualidade deve ser no máximo :max%.',
+            'ai.in' => 'O campo ai deve ser um dos seguintes: faces, safe.',
         ];
     }
 
