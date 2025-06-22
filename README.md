@@ -353,11 +353,4 @@ aws dynamodb describe-table --table-name img-stack-prod-images
 
 ---
 
-## Licença
-
-Este projeto está licenciado sob a [MIT License](LICENSE).
-
-
----
-
 **Mantido por**: [Anderson Diniz](https://github.com/AndersonDinizDev)
