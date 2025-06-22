@@ -137,8 +137,8 @@ Para URLs assinadas, configure no console AWS:
     --overwrite
    ```
 
-**Documentação oficial
-**: [Trusted Signers](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-trusted-signers.html)
+**Documentação oficial**:
+[Trusted Signers](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-trusted-signers.html)
 
 ## Deploy
 
@@ -176,14 +176,19 @@ serverless logs --function web --stage prod --tail
 
 ### Parâmetros da Requisição
 
-| Parâmetros | Descrição                                                       |
-|------------|-----------------------------------------------------------------|
-| `r_w`      | Largura da imagem                                               |
-| `w_h`      | Altura da imagem                                                |
-| `i_f`      | Formato da imagem                                               |
-| `i_q`      | Qualidade da imagem                                             |
-| `image`    | URL da imagem que deseja utilizar                               |
-| `ai`       | Utilizar analise de IA para verificar imagens de teor impróprio |
+| Parâmetros | Descrição                                                       | Exemplo                      |
+|------------|-----------------------------------------------------------------|------------------------------|
+| `r_w`      | Largura da imagem                                               | 100                          |
+| `w_h`      | Altura da imagem                                                | 100                          |
+| `i_f`      | Formato da imagem                                               | webp                         |
+| `i_q`      | Qualidade da imagem                                             | 100                          |
+| `image`    | URL da imagem que deseja utilizar                               | http://example.com/teste.png |
+| `ai`       | Utilizar analise de IA para verificar imagens de teor impróprio | ['safe', 'faces']            |            
+
+- **resources/views/teste.blade.php**: Arquivo com um simples exemplo de uso
+- **faces**: Utiliza a aws rekogtion para decteção de rosto na imagem e embaça caso encontrado
+- **safe**: Utiliza a aws rekognition para decteção de conteúdo impróprio, indesejado ou ofensivo e embaçada toda a
+  imagem caso encontrado
 
 ## Infraestrutura AWS
 
@@ -345,13 +350,6 @@ serverless logs --function worker --stage prod --startTime 1h
 # Métricas DynamoDB
 aws dynamodb describe-table --table-name img-stack-prod-images
 ```
-
----
-
-## Licença
-
-Este projeto está licenciado sob a [MIT License](LICENSE).
-
 
 ---
 

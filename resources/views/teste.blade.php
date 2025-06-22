@@ -5,14 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teste - Processamento de Imagens</title>
 
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
     <style>
-        /* Apenas CSS customizado essencial */
         .image-wrapper {
             position: relative;
             height: 200px;
@@ -28,7 +25,6 @@
             opacity: 1;
         }
 
-        /* Skeleton Animation */
         .skeleton {
             background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
             background-size: 200% 100%;
@@ -51,7 +47,6 @@
             background-size: 200% 100%;
         }
 
-        /* Status Badge */
         .status-badge {
             position: absolute;
             top: 0.5rem;
@@ -65,47 +60,48 @@
     <h1 class="mb-4">Galeria de Imagens - Processamento Assíncrono</h1>
 
     <div id="imageGrid" class="row g-4">
-        <!-- Cards serão inseridos aqui -->
     </div>
 </div>
 
-<!-- jQuery -->
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 
-<!-- Bootstrap 5 JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // Configuração
     const config = {
-        apiUrl: 'https://dzy9qlgb7cwht.cloudfront.net/api/v1/image',
+        apiUrl: '{{ env('API_GATEWAY_URL') }}',
         images: [
             {url: 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg', title: 'Paisagem 1'},
             {
                 url: 'https://media.imperatriz.ma.gov.br/svVaYVi2TBR-sEZaFveY8tJ4wzQ=/750x0/novo.imperatriz.ma.gov.br/media/site/content/article/WhatsApp_Image_2023-12-01_at_08.59.29.jpeg',
                 title: 'Paisagem 2'
             },
-            {url: 'https://img.cdndsgni.com/preview/10210688.jpg', title: 'Paisagem 3'},
+            {
+                url: 'https://static.vecteezy.com/ti/fotos-gratis/p1/17703891-pessoa-de-mulher-negra-vestindo-uma-camisa-vermelha-em-um-fundo-branco-foto.jpg',
+                title: 'Paisagem 3'
+            },
             {url: 'https://images.pexels.com/photos/1680140/pexels-photo-1680140.jpeg', title: 'Paisagem 4'},
             {url: 'https://images.pexels.com/photos/2253275/pexels-photo-2253275.jpeg', title: 'Paisagem 5'},
             {url: 'https://images.pexels.com/photos/1563356/pexels-photo-1563356.jpeg', title: 'Paisagem 6'}
         ],
         params: {
-            r_w: 1920,
-            r_h: 1080,
-            i_f: 'webp',
-            i_q: 100
+            r_w: 1024,
+            r_h: 768,
+            i_f: 'jpeg',
+            i_q: 100,
+            ai: [
+                'faces',
+                'safe'
+            ],
         }
     };
 
-    // Plugin jQuery para imagem assíncrona
     $.fn.asyncImage = function (imageData, params) {
         return this.each(function () {
             const $card = $(this);
             let retryCount = 0;
             const maxRetries = 20;
 
-            // Template do card com skeleton
             const cardHtml = `
                     <div class="card h-100 shadow-sm">
                         <div class="image-wrapper bg-secondary skeleton">
@@ -130,14 +126,12 @@
 
             $card.html(cardHtml);
 
-            // Elementos jQuery
             const $img = $card.find('img');
             const $imageWrapper = $card.find('.image-wrapper');
             const $statusBadge = $card.find('.status-badge');
             const $skeletonBody = $card.find('.skeleton-body');
             const $realBody = $card.find('.real-body');
 
-            // Função para carregar imagem
             async function loadImage() {
                 const queryParams = $.param({
                     ...params,
@@ -148,13 +142,10 @@
                     const data = await $.getJSON(`${config.apiUrl}?${queryParams}`);
 
                     if (data.status === 'ready' && data.url) {
-                        // Imagem pronta - exibir
                         displayImage(data.url);
                     } else {
-                        // Atualizar status
                         updateStatus(data.status);
 
-                        // Retry
                         const delay = (data.retry_after || 2) * 1000;
                         scheduleRetry(delay);
                     }
@@ -163,13 +154,10 @@
                 }
             }
 
-            // Exibir imagem quando carregada
             function displayImage(url) {
                 $img.on('load', function () {
-                    // Fade in da imagem
                     $img.addClass('show');
 
-                    // Remover skeleton após transição
                     setTimeout(() => {
                         $imageWrapper.removeClass('skeleton');
                         $statusBadge.remove();
@@ -185,7 +173,6 @@
                 $img.attr('src', url);
             }
 
-            // Atualizar badge de status
             function updateStatus(status) {
                 const statusConfig = {
                     'queued': {text: 'Na fila', class: 'bg-secondary'},
@@ -205,7 +192,6 @@
                         `);
             }
 
-            // Agendar retry
             function scheduleRetry(delay) {
                 if (retryCount >= maxRetries) {
                     showError();
@@ -217,7 +203,6 @@
                 setTimeout(loadImage, adjustedDelay);
             }
 
-            // Mostrar erro
             function showError() {
                 $imageWrapper.html(`
                         <div class="d-flex align-items-center justify-content-center h-100 text-muted">
@@ -231,16 +216,13 @@
                 $skeletonBody.remove();
             }
 
-            // Iniciar carregamento
             loadImage();
         });
     };
 
-    // Inicializar quando DOM estiver pronto
     $(document).ready(function () {
         const $grid = $('#imageGrid');
 
-        // Criar cards para cada imagem
         config.images.forEach((imageData, index) => {
             const $col = $('<div>').addClass('col-12 col-md-6 col-lg-4');
             $grid.append($col);
