@@ -137,8 +137,8 @@ Para URLs assinadas, configure no console AWS:
     --overwrite
    ```
 
-**Documentação oficial
-**: [Trusted Signers](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-trusted-signers.html)
+**Documentação oficial**:
+[Trusted Signers](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-trusted-signers.html)
 
 ## Deploy
 
