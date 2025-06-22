@@ -24,8 +24,6 @@ provider:
     CLOUDFRONT_KEY_PAIR_ID: ${ssm:/img-stack/cloudfront-key-pair-id}
     SQS_QUEUE_URL:
       Fn::Sub: "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/${self:service}-${opt:stage, self:provider.stage}-queue"
-    SKELETON_ENABLED: true
-    ASYNC_PROCESSING_ENABLED: true
     QUEUE_CONNECTION: sqs
     VIEW_COMPILED_PATH: /tmp/storage/framework/views
     CACHE_DRIVER: array
