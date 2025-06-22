@@ -42,12 +42,16 @@ class WorkerService
 
             if ($jobData['options']['ai_analysis']) {
 
-                match ($jobData['options']['ai_analysis']) {
-                    'faces' => $check = $this->rekognitionService->detectFaces($jobData['image_url']),
-                    default => $check = $this->rekognitionService->detectModeration($jobData['image_url'])
-                };
+                $check = [];
 
-                $jobData['image_check'] = $check;
+                foreach ($jobData['options']['ai_analysis'] as $analysis) {
+                    match ($analysis) {
+                        'faces' => $check['faces'] = $this->rekognitionService->detectFaces($jobData['image_url']),
+                        'safe' => $check['safe'] = $this->rekognitionService->detectModeration($jobData['image_url']),
+                        default => null
+                    };
+                    $jobData['image_check'] = $check;
+                }
             }
 
             \App\Jobs\ProcessImageJob::dispatch($jobData);

@@ -89,17 +89,20 @@ class ProcessImageJob implements ShouldQueue
             });
         }
 
-        if (isset($imageCheck['is_safe']) && $imageCheck['is_safe'] === false) {
+        if (isset($imageCheck['safe']['is_safe']) && $imageCheck['safe']['is_safe'] === false) {
             $image->blur(50);
         }
 
-        if (isset($imageCheck['is_face']) && $imageCheck['is_face'] === true) {
-            $faceWidth = $transformations['width'] * $imageCheck['labels'][0]['Width'];
-            $faceHeight = $transformations['height'] * $imageCheck['labels'][0]['Height'];
-            $faceLeft = $transformations['width'] * $imageCheck['labels'][0]['Left'];
-            $faceTop = $transformations['height'] * $imageCheck['labels'][0]['Top'];
+        if (isset($imageCheck['faces']['is_face']) && $imageCheck['faces']['is_face'] === true) {
+            $faceWidth = $transformations['width'] * $imageCheck['faces']['labels'][0]['Width'];
+            $faceHeight = $transformations['height'] * $imageCheck['faces']['labels'][0]['Height'];
+            $faceLeft = $transformations['width'] * $imageCheck['faces']['labels'][0]['Left'];
+            $faceTop = $transformations['height'] * $imageCheck['faces']['labels'][0]['Top'];
 
-            $image->crop($faceWidth, $faceHeight, $faceLeft, $faceTop);
+            $imageClone = clone $image;
+            $imageClone->crop($faceWidth, $faceHeight, $faceLeft, $faceTop);
+            $imageClone->blur(50);
+            $image->place($imageClone, 'top-left', $faceLeft, $faceTop);
         }
 
         $encoder = $this->selectFormatEncoder(

@@ -85,16 +85,23 @@
                 url: 'https://media.imperatriz.ma.gov.br/svVaYVi2TBR-sEZaFveY8tJ4wzQ=/750x0/novo.imperatriz.ma.gov.br/media/site/content/article/WhatsApp_Image_2023-12-01_at_08.59.29.jpeg',
                 title: 'Paisagem 2'
             },
-            {url: 'https://img.cdndsgni.com/preview/10210688.jpg', title: 'Paisagem 3'},
+            {
+                url: 'https://static.vecteezy.com/ti/fotos-gratis/p1/17703891-pessoa-de-mulher-negra-vestindo-uma-camisa-vermelha-em-um-fundo-branco-foto.jpg',
+                title: 'Paisagem 3'
+            },
             {url: 'https://images.pexels.com/photos/1680140/pexels-photo-1680140.jpeg', title: 'Paisagem 4'},
             {url: 'https://images.pexels.com/photos/2253275/pexels-photo-2253275.jpeg', title: 'Paisagem 5'},
             {url: 'https://images.pexels.com/photos/1563356/pexels-photo-1563356.jpeg', title: 'Paisagem 6'}
         ],
         params: {
-            r_w: 1920,
-            r_h: 1080,
+            r_w: 800,
+            r_h: 600,
             i_f: 'webp',
-            i_q: 100
+            i_q: 100,
+            ai: [
+                'faces',
+                'safe'
+            ],
         }
     };
 
