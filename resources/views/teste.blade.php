@@ -71,7 +71,7 @@
     const config = {
         apiUrl: '{{ env('API_GATEWAY_URL') }}',
         images: [
-            {url: 'https://images.pexels.com/photos/2662116/pexels-photo-26621245116.jpeg', title: 'Paisagem 1'},
+            {url: 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg', title: 'Paisagem 1'},
             {
                 url: 'https://media.imperatriz.ma.gov.br/svVaYVi2TBR-sEZaFveY8tJ4wzQ=/750x0/novo.imperatriz.ma.gov.br/media/site/content/article/WhatsApp_Image_2023-12-01_at_08.59.29.jpeg',
                 title: 'Paisagem 2'
@@ -85,8 +85,8 @@
             {url: 'https://images.pexels.com/photos/1563356/pexels-photo-1563356.jpeg', title: 'Paisagem 6'}
         ],
         params: {
-            r_w: 1024,
-            r_h: 768,
+            r_w: 1200,
+            r_h: 700,
             i_f: 'jpeg',
             i_q: 100,
             ai: [

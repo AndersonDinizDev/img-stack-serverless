@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProcessImageRequest;
 use App\Http\Services\ImageProcessingService;
+use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
@@ -16,16 +17,12 @@ class ImageController extends Controller
         $this->imgService = $imgService;
     }
 
+    /**
+     * @throws Exception
+     */
     public function index(ProcessImageRequest $request): JsonResponse
     {
-        try {
-            $imageData = $this->imgService->processImage($request);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Ocorreu um problema ao processar a imagem. Tente novamente mais tarde'
-            ], 500);
-        }
+        $imageData = $this->imgService->processImage($request);
 
         return response()->json($imageData);
     }

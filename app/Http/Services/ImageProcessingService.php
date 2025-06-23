@@ -31,36 +31,20 @@ class ImageProcessingService
         $cacheKey = md5(json_encode($cacheKeyParams));
         $cachePath = "{$cacheKey}.{$cacheKeyParams['format']}";
 
-        try {
-            if (StorageService::searchFile('s3_cache', $cachePath)) {
-                $signedUrl = StorageService::getSignerUrl($cachePath);
+        if (StorageService::searchFile('s3_cache', $cachePath)) {
+            $signedUrl = StorageService::getSignerUrl($cachePath);
 
-                return [
-                    'status' => 'ready',
-                    'url' => $signedUrl
-                ];
-            }
-        } catch (Exception $e) {
-            Log::error("Erro ao verificar cache S3", [
-                'cache_key' => $cacheKey,
-                'error' => $e->getMessage()
-            ]);
-            throw $e;
+            return [
+                'status' => 'ready',
+                'url' => $signedUrl
+            ];
         }
 
         $jobStatus = $this->workerService->getJobStatus($cacheKey);
 
         if ($jobStatus === null || $jobStatus === 'failed') {
-            try {
-                $this->workerService->dispatchImageProcessing($data, $cacheKey);
-                $jobStatus = 'queued';
-            } catch (Exception $e) {
-                Log::error("Erro ao processar imagem", [
-                    'cache_key' => $cacheKey,
-                    'error' => $e->getMessage()
-                ]);
-                throw $e;
-            }
+            $this->workerService->dispatchImageProcessing($data, $cacheKey);
+            $jobStatus = 'queued';
         }
 
         return [

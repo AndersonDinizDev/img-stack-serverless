@@ -2,6 +2,7 @@
 
 namespace App\Http\Services;
 
+use App\Exceptions\FailedJobException;
 use Aws\DynamoDb\DynamoDbClient;
 use Aws\DynamoDb\Marshaler;
 use Exception;
@@ -15,7 +16,7 @@ class WorkerService
     }
 
     /**
-     * Dispatcha job usando Laravel Queue (que vai para SQS automaticamente)
+     * Despacha o job usando Laravel Queue (que vai para SQS automaticamente)
      *
      * @param object $data
      * @param string $cacheKey
@@ -24,56 +25,55 @@ class WorkerService
      */
     public function dispatchImageProcessing(object $data, string $cacheKey): bool
     {
-        try {
-            $jobData = [
-                'job_id' => uniqid('job_', true),
-                'cache_key' => $cacheKey,
-                'image_url' => $data->image,
-                'transformations' => [
-                    'width' => $data->r_w ?? null,
-                    'height' => $data->r_h ?? null,
-                    'format' => $data->i_f ?? 'jpeg',
-                    'quality' => $data->i_q ?? 80
-                ],
-                'options' => [
-                    'ai_analysis' => $data->ai ?? null
-                ],
-                'created_at' => time(),
-                'attempts' => 0
-            ];
+        $jobData = [
+            'job_id' => uniqid('job_', true),
+            'cache_key' => $cacheKey,
+            'image_url' => $data->image,
+            'transformations' => [
+                'width' => $data->r_w ?? null,
+                'height' => $data->r_h ?? null,
+                'format' => $data->i_f ?? 'jpeg',
+                'quality' => $data->i_q ?? 80
+            ],
+            'options' => [
+                'ai_analysis' => $data->ai ?? null
+            ],
+            'created_at' => time(),
+            'attempts' => 0
+        ];
 
-            if ($jobData['options']['ai_analysis']) {
+        if ($data->ai) {
 
-                $check = [];
+            $check = [];
 
-                foreach ($jobData['options']['ai_analysis'] as $analysis) {
-                    match ($analysis) {
-                        'faces' => $check['faces'] = $this->rekognitionService->detectFaces($jobData['image_url']),
-                        'safe' => $check['safe'] = $this->rekognitionService->detectModeration($jobData['image_url']),
-                        default => null
-                    };
-                    $jobData['image_check'] = $check;
-                }
+            foreach ($data->ai as $analysis) {
+                match ($analysis) {
+                    'faces' => $check['faces'] = $this->rekognitionService->detectFaces($jobData['image_url']),
+                    'safe' => $check['safe'] = $this->rekognitionService->detectModeration($jobData['image_url']),
+                    default => null
+                };
+                $jobData['image_check'] = $check;
             }
+        }
 
+        try {
             \App\Jobs\ProcessImageJob::dispatch($jobData);
 
             $this->saveJobStatus($cacheKey, $jobData['job_id'], 'queued', 0);
-
-            Log::info('Job de processamento de imagem enviado via Laravel Queue', [
-                'job_id' => $jobData['job_id'],
-                'cache_key' => $cacheKey,
-                'queue_connection' => env('QUEUE_CONNECTION')
-            ]);
-
             return true;
+
         } catch (Exception $e) {
-            Log::error('Falha ao despachar job de processamento de imagem', [
+            Log::error('Falha crítica ao tentar despachar job ou salvar status.', [
                 'cache_key' => $cacheKey,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
 
-            throw $e;
+            throw new FailedJobException(
+                'Não foi possível enviar o trabalho para a fila de processamento. Tente novamente mais tarde.',
+                500,
+                $e
+            );
         }
     }
 

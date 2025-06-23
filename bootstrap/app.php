@@ -23,4 +23,39 @@ return Application::configure(basePath: dirname(__DIR__))
             return $request->expectsJson();
         });
 
+        $exceptions->renderable(function (\App\Exceptions\ImageProcessingFailureException $e, $request) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'error_code' => 'IMAGE_PROCESSING_FAILURE'
+            ], 400);
+        });
+
+        $exceptions->renderable(function (\App\Exceptions\InvalidImageException $e, $request) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'error_code' => 'INVALID_IMAGE'
+            ], 400);
+        });
+
+        $exceptions->renderable(function (\App\Exceptions\FailedJobException $e, $request) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'error_code' => 'FAILED_JOB'
+            ], 400);
+        });
+
+        $exceptions->renderable(function (\App\Exceptions\CloudFrontFailureException $e, $request) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'error_code' => 'CLOUDFRONT_FAILURE'
+            ]);
+        });
+
+        $exceptions->renderable(function (\App\Exceptions\StorageImageFailureException $e, $request) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'error_code' => 'STORAGE_IMAGE_FAILURE'
+            ]);
+        });
+
     })->create();

@@ -24,9 +24,7 @@ class ProcessImageJob implements ShouldQueue
     public int $tries = 3;
     public int $timeout = 180;
 
-    protected array $jobData;
-
-    public function __construct(array $jobData)
+    public function __construct(protected array $jobData)
     {
         $this->jobData = $jobData;
     }
@@ -74,6 +72,7 @@ class ProcessImageJob implements ShouldQueue
      * Aplica as transformações na imagem conforma os parâmetros recebidos
      * @param $imageContent
      * @param array $transformations
+     * @param array $imageCheck
      * @return EncodedImageInterface
      */
     private function transformImage($imageContent, array $transformations, array $imageCheck = []): EncodedImageInterface
