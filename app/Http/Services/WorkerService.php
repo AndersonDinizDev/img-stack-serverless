@@ -2,8 +2,10 @@
 
 namespace App\Http\Services;
 
+use App\Exceptions\FailedJobException;
 use Aws\DynamoDb\DynamoDbClient;
 use Aws\DynamoDb\Marshaler;
+use Exception;
 use Illuminate\Support\Facades\Log;
 
 class WorkerService
@@ -14,64 +16,64 @@ class WorkerService
     }
 
     /**
-     * Dispatcha job usando Laravel Queue (que vai para SQS automaticamente)
+     * Despacha o job usando Laravel Queue (que vai para SQS automaticamente)
      *
      * @param object $data
      * @param string $cacheKey
      * @return bool
+     * @throws Exception
      */
     public function dispatchImageProcessing(object $data, string $cacheKey): bool
     {
-        try {
-            $jobData = [
-                'job_id' => uniqid('job_', true),
-                'cache_key' => $cacheKey,
-                'image_url' => $data->image,
-                'transformations' => [
-                    'width' => $data->r_w ?? null,
-                    'height' => $data->r_h ?? null,
-                    'format' => $data->i_f ?? 'jpeg',
-                    'quality' => $data->i_q ?? 80
-                ],
-                'options' => [
-                    'ai_analysis' => $data->ai ?? null
-                ],
-                'created_at' => time(),
-                'attempts' => 0
-            ];
+        $jobData = [
+            'job_id' => uniqid('job_', true),
+            'cache_key' => $cacheKey,
+            'image_url' => $data->image,
+            'transformations' => [
+                'width' => $data->r_w ?? null,
+                'height' => $data->r_h ?? null,
+                'format' => $data->i_f ?? 'jpeg',
+                'quality' => $data->i_q ?? 80
+            ],
+            'options' => [
+                'ai_analysis' => $data->ai ?? null
+            ],
+            'created_at' => time(),
+            'attempts' => 0
+        ];
 
-            if ($jobData['options']['ai_analysis']) {
+        if ($data->ai) {
 
-                $check = [];
+            $check = [];
 
-                foreach ($jobData['options']['ai_analysis'] as $analysis) {
-                    match ($analysis) {
-                        'faces' => $check['faces'] = $this->rekognitionService->detectFaces($jobData['image_url']),
-                        'safe' => $check['safe'] = $this->rekognitionService->detectModeration($jobData['image_url']),
-                        default => null
-                    };
-                    $jobData['image_check'] = $check;
-                }
+            foreach ($data->ai as $analysis) {
+                match ($analysis) {
+                    'faces' => $check['faces'] = $this->rekognitionService->detectFaces($jobData['image_url']),
+                    'safe' => $check['safe'] = $this->rekognitionService->detectModeration($jobData['image_url']),
+                    default => null
+                };
+                $jobData['image_check'] = $check;
             }
+        }
 
+        try {
             \App\Jobs\ProcessImageJob::dispatch($jobData);
 
             $this->saveJobStatus($cacheKey, $jobData['job_id'], 'queued', 0);
-
-            Log::info('Image processing job dispatched via Laravel Queue', [
-                'job_id' => $jobData['job_id'],
-                'cache_key' => $cacheKey,
-                'queue_connection' => env('QUEUE_CONNECTION')
-            ]);
-
             return true;
-        } catch (\Exception $e) {
-            Log::error('Failed to dispatch image processing job', [
+
+        } catch (Exception $e) {
+            Log::error('Falha crítica ao tentar despachar job ou salvar status.', [
                 'cache_key' => $cacheKey,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
 
-            return false;
+            throw new FailedJobException(
+                'Não foi possível enviar o trabalho para a fila de processamento. Tente novamente mais tarde.',
+                500,
+                $e
+            );
         }
     }
 
@@ -84,6 +86,7 @@ class WorkerService
      * @param int $progress
      * @param string|null $error
      * @return bool
+     * @throws Exception
      */
     public function saveJobStatus(string $cacheKey, string $jobId, string $status, int $progress = 0, string $error = null): bool
     {
@@ -112,14 +115,14 @@ class WorkerService
             ]);
 
             return true;
-        } catch (\Exception $e) {
-            Log::error('Failed to save job status', [
+        } catch (Exception $e) {
+            Log::error('Falha ao salvar status do job', [
                 'job_id' => $jobId,
                 'cache_key' => $cacheKey,
                 'error' => $e->getMessage()
             ]);
 
-            return false;
+            throw $e;
         }
     }
 
@@ -128,6 +131,7 @@ class WorkerService
      *
      * @param string $cacheKey
      * @return ?string
+     * @throws Exception
      */
     public function getJobStatus(string $cacheKey): ?string
     {
@@ -149,13 +153,13 @@ class WorkerService
             }
 
             return null;
-        } catch (\Exception $e) {
-            Log::error('Failed to get job status', [
+        } catch (Exception $e) {
+            Log::error('Falha ao obter status do job', [
                 'cache_key' => $cacheKey,
                 'error' => $e->getMessage()
             ]);
 
-            return null;
+            throw $e;
         }
     }
 
@@ -166,6 +170,7 @@ class WorkerService
      * @param int $progress
      * @param string $status
      * @return bool
+     * @throws Exception
      */
     public function updateJobProgress(string $jobId, int $progress, string $status = 'processing'): bool
     {
@@ -185,53 +190,13 @@ class WorkerService
             ]);
 
             return true;
-        } catch (\Exception $e) {
-            Log::error('Failed to update job progress', [
+        } catch (Exception $e) {
+            Log::error('Falha ao atualizar progresso do job', [
                 'job_id' => $jobId,
                 'error' => $e->getMessage()
             ]);
 
-            return false;
-        }
-    }
-
-    /**
-     * Limpa jobs antigos
-     *
-     * @param int $daysOld
-     * @return int
-     */
-    public function cleanupOldJobs(int $daysOld = 7): int
-    {
-        try {
-            $cutoffTime = time() - ($daysOld * 24 * 60 * 60);
-
-            $result = $this->dynamodb->scan([
-                'TableName' => env('DYNAMODB_JOBS_TABLE'),
-                'FilterExpression' => 'created_at < :cutoff',
-                'ExpressionAttributeValues' => $this->marshaler->marshalItem([
-                    ':cutoff' => (string)$cutoffTime
-                ]),
-                'ProjectionExpression' => 'job_id'
-            ]);
-
-            $deletedCount = 0;
-            foreach ($result['Items'] as $item) {
-                $jobId = $this->marshaler->unmarshalItem($item)['job_id'];
-
-                $this->dynamodb->deleteItem([
-                    'TableName' => env('DYNAMODB_JOBS_TABLE'),
-                    'Key' => $this->marshaler->marshalItem(['job_id' => $jobId])
-                ]);
-
-                $deletedCount++;
-            }
-
-            Log::info("Cleaned up {$deletedCount} old jobs");
-            return $deletedCount;
-        } catch (\Exception $e) {
-            Log::error('Failed to cleanup old jobs', ['error' => $e->getMessage()]);
-            return 0;
+            throw $e;
         }
     }
 }
