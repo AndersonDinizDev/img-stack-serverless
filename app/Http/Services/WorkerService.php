@@ -4,6 +4,7 @@ namespace App\Http\Services;
 
 use Aws\DynamoDb\DynamoDbClient;
 use Aws\DynamoDb\Marshaler;
+use Exception;
 use Illuminate\Support\Facades\Log;
 
 class WorkerService
@@ -19,6 +20,7 @@ class WorkerService
      * @param object $data
      * @param string $cacheKey
      * @return bool
+     * @throws Exception
      */
     public function dispatchImageProcessing(object $data, string $cacheKey): bool
     {
@@ -58,20 +60,20 @@ class WorkerService
 
             $this->saveJobStatus($cacheKey, $jobData['job_id'], 'queued', 0);
 
-            Log::info('Image processing job dispatched via Laravel Queue', [
+            Log::info('Job de processamento de imagem enviado via Laravel Queue', [
                 'job_id' => $jobData['job_id'],
                 'cache_key' => $cacheKey,
                 'queue_connection' => env('QUEUE_CONNECTION')
             ]);
 
             return true;
-        } catch (\Exception $e) {
-            Log::error('Failed to dispatch image processing job', [
+        } catch (Exception $e) {
+            Log::error('Falha ao despachar job de processamento de imagem', [
                 'cache_key' => $cacheKey,
                 'error' => $e->getMessage()
             ]);
 
-            return false;
+            throw $e;
         }
     }
 
@@ -84,6 +86,7 @@ class WorkerService
      * @param int $progress
      * @param string|null $error
      * @return bool
+     * @throws Exception
      */
     public function saveJobStatus(string $cacheKey, string $jobId, string $status, int $progress = 0, string $error = null): bool
     {
@@ -112,14 +115,14 @@ class WorkerService
             ]);
 
             return true;
-        } catch (\Exception $e) {
-            Log::error('Failed to save job status', [
+        } catch (Exception $e) {
+            Log::error('Falha ao salvar status do job', [
                 'job_id' => $jobId,
                 'cache_key' => $cacheKey,
                 'error' => $e->getMessage()
             ]);
 
-            return false;
+            throw $e;
         }
     }
 
@@ -128,6 +131,7 @@ class WorkerService
      *
      * @param string $cacheKey
      * @return ?string
+     * @throws Exception
      */
     public function getJobStatus(string $cacheKey): ?string
     {
@@ -149,13 +153,13 @@ class WorkerService
             }
 
             return null;
-        } catch (\Exception $e) {
-            Log::error('Failed to get job status', [
+        } catch (Exception $e) {
+            Log::error('Falha ao obter status do job', [
                 'cache_key' => $cacheKey,
                 'error' => $e->getMessage()
             ]);
 
-            return null;
+            throw $e;
         }
     }
 
@@ -166,6 +170,7 @@ class WorkerService
      * @param int $progress
      * @param string $status
      * @return bool
+     * @throws Exception
      */
     public function updateJobProgress(string $jobId, int $progress, string $status = 'processing'): bool
     {
@@ -185,53 +190,13 @@ class WorkerService
             ]);
 
             return true;
-        } catch (\Exception $e) {
-            Log::error('Failed to update job progress', [
+        } catch (Exception $e) {
+            Log::error('Falha ao atualizar progresso do job', [
                 'job_id' => $jobId,
                 'error' => $e->getMessage()
             ]);
 
-            return false;
-        }
-    }
-
-    /**
-     * Limpa jobs antigos
-     *
-     * @param int $daysOld
-     * @return int
-     */
-    public function cleanupOldJobs(int $daysOld = 7): int
-    {
-        try {
-            $cutoffTime = time() - ($daysOld * 24 * 60 * 60);
-
-            $result = $this->dynamodb->scan([
-                'TableName' => env('DYNAMODB_JOBS_TABLE'),
-                'FilterExpression' => 'created_at < :cutoff',
-                'ExpressionAttributeValues' => $this->marshaler->marshalItem([
-                    ':cutoff' => (string)$cutoffTime
-                ]),
-                'ProjectionExpression' => 'job_id'
-            ]);
-
-            $deletedCount = 0;
-            foreach ($result['Items'] as $item) {
-                $jobId = $this->marshaler->unmarshalItem($item)['job_id'];
-
-                $this->dynamodb->deleteItem([
-                    'TableName' => env('DYNAMODB_JOBS_TABLE'),
-                    'Key' => $this->marshaler->marshalItem(['job_id' => $jobId])
-                ]);
-
-                $deletedCount++;
-            }
-
-            Log::info("Cleaned up {$deletedCount} old jobs");
-            return $deletedCount;
-        } catch (\Exception $e) {
-            Log::error('Failed to cleanup old jobs', ['error' => $e->getMessage()]);
-            return 0;
+            throw $e;
         }
     }
 }
