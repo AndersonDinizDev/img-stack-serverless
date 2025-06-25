@@ -130,13 +130,13 @@
                         </div>
                         <div class="col-12">
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" id="detectFaces" checked>
+                                <input class="form-check-input" type="checkbox" id="detectFaces">
                                 <label class="form-check-label" for="detectFaces">
                                     Detectar rostos
                                 </label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" id="detectUnsafe" checked>
+                                <input class="form-check-input" type="checkbox" id="detectUnsafe">
                                 <label class="form-check-label" for="detectUnsafe">
                                     Detectar conteúdo inadequado
                                 </label>
