@@ -38,27 +38,24 @@ class ProcessImageJob implements ShouldQueue
         $cacheKey = $this->jobData['cache_key'];
 
         try {
-            $workerService->updateJobProgress($jobId, 10, 'processing');
+            $workerService->updateJobProgress($jobId, 10);
 
             $imageContent = file_get_contents($this->jobData['image_url']);
 
-            if (!$imageContent) {
-                throw new Exception('Failed to download image');
-            }
             $workerService->updateJobProgress($jobId, 50);
 
             $processedImage = $this->transformImage($imageContent, $this->jobData['transformations'], $this->jobData['image_check'] ?? []);;
             $workerService->updateJobProgress($jobId, 80);
 
             $cachePath = $cacheKey . '.' . $this->jobData['transformations']['format'];
-            if (!StorageService::saveFile('s3_cache', $cachePath, $processedImage)) {
-                throw new Exception('Failed to save processed image');
-            }
+
+            StorageService::saveFile('s3_cache', $cachePath, $processedImage);
 
             $workerService->saveJobStatus($cacheKey, $jobId, 'completed', 100);
-            Log::info("Job completed successfully: {$jobId}");
+
+            Log::info("Job finalizado com sucesso: {$jobId}");
         } catch (Exception $e) {
-            Log::error("Job failed: {$e->getMessage()}", [
+            Log::error("Falha no job: {$e->getMessage()}", [
                 'job_id' => $jobId,
                 'error' => $e->getMessage()
             ]);
