@@ -58,4 +58,18 @@ return Application::configure(basePath: dirname(__DIR__))
             ]);
         });
 
+        $exceptions->renderable(function (\App\Exceptions\AwsServiceFailureException $e, $request) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'error_code' => 'AWS_SERVICE_FAILURE'
+            ]);
+        });
+
+        $exceptions->renderable(function (\App\Exceptions\DynamoDBFailureException $e, $request) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'error_code' => 'DYNAMODB_FAILURE'
+            ]);
+        });
+
     })->create();
