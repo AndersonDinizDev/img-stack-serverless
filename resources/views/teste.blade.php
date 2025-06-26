@@ -130,13 +130,13 @@
                         </div>
                         <div class="col-12">
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" id="detectFaces" checked>
+                                <input class="form-check-input" type="checkbox" id="detectFaces">
                                 <label class="form-check-label" for="detectFaces">
                                     Detectar rostos
                                 </label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" id="detectUnsafe" checked>
+                                <input class="form-check-input" type="checkbox" id="detectUnsafe">
                                 <label class="form-check-label" for="detectUnsafe">
                                     Detectar conteúdo inadequado
                                 </label>
@@ -356,12 +356,15 @@ process_image "https://example.com/image.jpg"</code></pre>
     const config = {
         apiUrl: '{{ env('API_GATEWAY_URL') }}',
         images: [
-            {url: 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg', title: 'Paisagem Montanhosa'},
-            {url: 'https://images.pexels.com/photos/1680140/pexels-photo-1680140.jpeg', title: 'Praia Tropical'},
-            {url: 'https://images.pexels.com/photos/2253275/pexels-photo-2253275.jpeg', title: 'Floresta Verde'},
-            {url: 'https://images.pexels.com/photos/1563356/pexels-photo-1563356.jpeg', title: 'Cidade Noturna'},
-            {url: 'https://images.pexels.com/photos/2422915/pexels-photo-2422915.jpeg', title: 'Deserto Dourado'},
-            {url: 'https://images.pexels.com/photos/1761279/pexels-photo-1761279.jpeg', title: 'Lago Sereno'}
+            {url: 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg', title: 'Imagem 1'},
+            {url: 'https://images.pexels.com/photos/1680140/pexels-photo-1680140.jpeg', title: 'Imagem 2'},
+            {url: 'https://images.pexels.com/photos/2253275/pexels-photo-2253275.jpeg', title: 'Imagem 3'},
+            {url: 'https://images.pexels.com/photos/1563356/pexels-photo-1563356.jpeg', title: 'Imagem 4'},
+            {
+                url: 'https://images.pexels.com/photos/2422915/pexels-photo-2422915.jpeg',
+                title: 'Imagem 5'
+            },
+            {url: 'https://www.forte.jor.br/wp-content/uploads/2024/09/ARAD-7-1024x683.jpg', title: 'Imagem 6'}
         ]
     };
 

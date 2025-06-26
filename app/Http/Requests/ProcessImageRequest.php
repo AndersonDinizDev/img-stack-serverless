@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\IsValidImageableUrl;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -25,7 +26,7 @@ class ProcessImageRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'image' => 'required|url',
+            'image' => ['required', 'url', new IsValidImageableUrl],
             'r_w' => 'integer|min:1|max:4096|required_if:transform,resize',
             'r_h' => 'integer|min:1|max:4096|required_if:transform,resize',
             'i_f' => 'required|string|in:jpg,jpeg,png,webp',

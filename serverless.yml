@@ -16,7 +16,6 @@ provider:
     SQS_QUEUE: ${self:service}-${opt:stage, self:provider.stage}-queue
     SQS_PREFIX:
       Fn::Sub: "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}"
-    DYNAMODB_METADATA_TABLE: ${self:service}-${opt:stage, self:provider.stage}-metadata
     DYNAMODB_JOBS_TABLE: ${self:service}-${opt:stage, self:provider.stage}-jobs
     CLOUDFRONT_DOMAIN:
       Fn::GetAtt: [ CloudFrontDistribution, DomainName ]
@@ -49,7 +48,6 @@ provider:
             - sqs:GetQueueAttributes
           Resource:
             - Fn::GetAtt: [ ProcessingQueue, Arn ]
-            - Fn::GetAtt: [ ProcessingDeadLetterQueue, Arn ]
         - Effect: Allow
           Action:
             - dynamodb:Query
@@ -59,9 +57,7 @@ provider:
             - dynamodb:UpdateItem
             - dynamodb:DeleteItem
           Resource:
-            - Fn::GetAtt: [ ImageMetadataTable, Arn ]
             - Fn::GetAtt: [ ProcessingJobsTable, Arn ]
-            - Fn::Sub: "${ImageMetadataTable.Arn}/index/*"
             - Fn::Sub: "${ProcessingJobsTable.Arn}/index/*"
         - Effect: Allow
           Action:
@@ -88,11 +84,10 @@ package:
 functions:
   web:
     handler: public/index.php
-    runtime: php-82-fpm
     layers:
       - ${bref-extra:imagick-php-82}
     timeout: 28
-    memorySize: 512
+    memorySize: 256
     events:
       - httpApi: "*"
     environment:
@@ -111,9 +106,6 @@ functions:
           batchSize: 1
     environment:
       FUNCTION_NAME: worker
-      QUEUE_CONNECTION: sqs
-      SQS_QUEUE: !Ref ProcessingQueue
-      SQS_PREFIX: !Sub "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}"
 
 plugins:
   - ./vendor/bref/bref
@@ -127,16 +119,6 @@ resources:
         QueueName: ${self:service}-${opt:stage, self:provider.stage}-queue
         VisibilityTimeout: 330
         MessageRetentionPeriod: 345600
-        RedrivePolicy:
-          deadLetterTargetArn:
-            Fn::GetAtt: [ ProcessingDeadLetterQueue, Arn ]
-          maxReceiveCount: 3
-
-    ProcessingDeadLetterQueue:
-      Type: AWS::SQS::Queue
-      Properties:
-        QueueName: ${self:service}-${opt:stage, self:provider.stage}-dlq
-        MessageRetentionPeriod: 1209600
 
     CacheBucket:
       Type: AWS::S3::Bucket
@@ -190,33 +172,6 @@ resources:
                       ],
                     ]
 
-    ImageMetadataTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: ${self:service}-${opt:stage, self:provider.stage}-metadata
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: image_id
-            AttributeType: S
-          - AttributeName: user_id
-            AttributeType: S
-          - AttributeName: created_at
-            AttributeType: S
-        KeySchema:
-          - AttributeName: image_id
-            KeyType: HASH
-        GlobalSecondaryIndexes:
-          - IndexName: user_id-created_at-index
-            KeySchema:
-              - AttributeName: user_id
-                KeyType: HASH
-              - AttributeName: created_at
-                KeyType: RANGE
-            Projection:
-              ProjectionType: ALL
-        PointInTimeRecoverySpecification:
-          PointInTimeRecoveryEnabled: false
-
     ProcessingJobsTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -230,7 +185,7 @@ resources:
           - AttributeName: status
             AttributeType: S
           - AttributeName: created_at
-            AttributeType: S
+            AttributeType: N
           - AttributeName: cache_key
             AttributeType: S
           - AttributeName: updated_at
@@ -326,27 +281,27 @@ resources:
 
   Outputs:
     ApiEndpoint:
-      Description: "API Gateway endpoint URL"
+      Description: "URL do endpoint da API Gateway"
       Value:
         Fn::Sub: "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
 
     ProcessingQueueUrl:
-      Description: "URL of the SQS Queue"
+      Description: "URL da Fila SQS"
       Value:
         Ref: ProcessingQueue
 
     ProcessingQueueArn:
-      Description: "ARN of the SQS Queue"
+      Description: "ARN da Fila SQS"
       Value:
         Fn::GetAtt: [ ProcessingQueue, Arn ]
 
     CacheBucketName:
-      Description: "Name of the cache S3 bucket"
+      Description: "Nome do bucket S3 de cache"
       Value:
         Ref: CacheBucket
 
     CacheBucketUrl:
-      Description: "URL to access cached images"
+      Description: "URL para acessar imagens em cache"
       Value:
         Fn::Sub: "https://${CacheBucket}.s3.${AWS::Region}.amazonaws.com"
 

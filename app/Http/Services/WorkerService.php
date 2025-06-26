@@ -6,6 +6,7 @@ use App\Exceptions\FailedJobException;
 use Aws\DynamoDb\DynamoDbClient;
 use Aws\DynamoDb\Marshaler;
 use Exception;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class WorkerService
@@ -70,7 +71,7 @@ class WorkerService
             ]);
 
             throw new FailedJobException(
-                'Não foi possível enviar o trabalho para a fila de processamento. Tente novamente mais tarde.',
+                'Não foi possível enviar o job para a fila de processamento. Tente novamente mais tarde.',
                 500,
                 $e
             );
@@ -96,9 +97,9 @@ class WorkerService
                 'cache_key' => $cacheKey,
                 'status' => $status,
                 'progress' => $progress,
-                'created_at' => (string)time(),
+                'created_at' => time(),
                 'updated_at' => time(),
-                'ttl' => time() + (24 * 60 * 60) // TTL de 24 horas
+                'ttl' => time() + (24 * 60 * 60)
             ];
 
             if ($error) {

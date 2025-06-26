@@ -7,8 +7,6 @@ use App\Exceptions\InvalidImageException;
 use Aws\Exception\AwsException;
 use Aws\Rekognition\Exception\RekognitionException;
 use Aws\Rekognition\RekognitionClient;
-use Illuminate\Http\Client\ConnectionException;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class RekognitionService
@@ -29,27 +27,16 @@ class RekognitionService
      */
     public function detectModeration(mixed $image): array
     {
-        $response = $this->getResponse($image);
 
         try {
             $checkImage = $this->rekognitionClient->detectModerationLabels([
                 'Image' => [
-                    'Bytes' => $response->body(),
+                    'Bytes' => file_get_contents($image),
                 ],
                 'MinConfidence' => 75,
             ]);
         } catch (RekognitionException $e) {
-            Log::error($e->getMessage());
-            match ($e->getAwsErrorCode()) {
-                'InvalidImageFormatException' => throw new InvalidImageException("O link da imagem fornecida é inválida ou esta em um formato não suportado."),
-                'ProvisionedThroughputExceededException' => throw new ImageProcessingFailureException("O serviço de análise está sobrecarregado. Tente novamente em alguns instantes."),
-                'ImageTooLargeException', 'ValidationException' => throw new InvalidImageException("A imagem é muito grande para ser processada."),
-                'AccessDeniedException' => throw new ImageProcessingFailureException("Sem permissão para acessar o serviço de análise."),
-                'InvalidParameterException' => throw new InvalidImageException("Parâmetros inválidos na requisição."),
-                'ThrottlingException' => throw new ImageProcessingFailureException("Muitas requisições simultâneas. Tente novamente em alguns instantes."),
-                'ServiceQuotaExceededException' => throw new ImageProcessingFailureException("Cota de serviço excedida. Tente novamente mais tarde."),
-                default => throw new ImageProcessingFailureException("Ocorreu um erro ao processar a imagem. Tente novamente mais tarde.")
-            };
+            self::handleException($e);
         } catch (AwsException $e) {
             Log::error($e->getMessage());
             throw new ImageProcessingFailureException("Falha na comunicação com os serviços. Tente novamente mais tarde.");
@@ -79,26 +66,15 @@ class RekognitionService
      */
     public function detectFaces(mixed $image): array
     {
-        $response = $this->getResponse($image);
 
         try {
             $checkImage = $this->rekognitionClient->detectFaces([
                 'Image' => [
-                    'Bytes' => $response->body(),
+                    'Bytes' => file_get_contents($image),
                 ],
             ]);
         } catch (RekognitionException $e) {
-            Log::error($e->getMessage());
-            match ($e->getAwsErrorCode()) {
-                'InvalidImageFormatException' => throw new InvalidImageException("O link da imagem fornecida é inválida ou esta em um formato não suportado."),
-                'ProvisionedThroughputExceededException' => throw new ImageProcessingFailureException("O serviço de análise está sobrecarregado. Tente novamente em alguns instantes."),
-                'ImageTooLargeException', 'ValidationException' => throw new InvalidImageException("A imagem é muito grande para ser processada."),
-                'AccessDeniedException' => throw new ImageProcessingFailureException("Sem permissão para acessar o serviço de análise."),
-                'InvalidParameterException' => throw new InvalidImageException("Parâmetros inválidos na requisição."),
-                'ThrottlingException' => throw new ImageProcessingFailureException("Muitas requisições simultâneas. Tente novamente em alguns instantes."),
-                'ServiceQuotaExceededException' => throw new ImageProcessingFailureException("Cota de serviço excedida. Tente novamente mais tarde."),
-                default => throw new ImageProcessingFailureException("Ocorreu um erro ao processar a imagem. Tente novamente mais tarde.")
-            };
+            self::handleException($e);
         } catch (AwsException $e) {
             Log::error($e->getMessage());
             throw new ImageProcessingFailureException("Falha na comunicação com os serviços. Tente novamente mais tarde.");
@@ -123,31 +99,22 @@ class RekognitionService
     }
 
     /**
-     * @param mixed $image
-     * @return \GuzzleHttp\Promise\PromiseInterface|\Illuminate\Http\Client\Response
+     * @param RekognitionException $e
+     * @return void
+     * @throws ImageProcessingFailureException
      * @throws InvalidImageException
      */
-    public function getResponse(mixed $image): \Illuminate\Http\Client\Response|\GuzzleHttp\Promise\PromiseInterface
+    public function handleException(RekognitionException $e): void
     {
-        try {
-            $response = Http::timeout(10)->get($image);
-
-            if ($response->failed()) {
-                Log::warning('URL da imagem retornou um status de erro.', [
-                    'url' => $image,
-                    'status' => $response->status()
-                ]);
-
-                throw new InvalidImageException("Falha ao obter a imagem fornecida. O servidor retornou um status de erro: " . $response->status());
-            }
-        } catch (ConnectionException $e) {
-            Log::warning('Falha ao obter imagem.', [
-                'url' => $image,
-                'error' => $e->getMessage()
-            ]);
-
-            throw new InvalidImageException("Não foi possível conectar com o servidor da imagem fornecida.");
-        }
-        return $response;
+        match ($e->getAwsErrorCode()) {
+            'InvalidImageFormatException' => throw new InvalidImageException("O link da imagem fornecida é inválida ou esta em um formato não suportado."),
+            'ProvisionedThroughputExceededException' => throw new ImageProcessingFailureException("O serviço de análise está sobrecarregado. Tente novamente em alguns instantes."),
+            'ImageTooLargeException', 'ValidationException' => throw new InvalidImageException("A imagem é muito grande para ser processada."),
+            'AccessDeniedException' => throw new ImageProcessingFailureException("Sem permissão para acessar o serviço de análise."),
+            'InvalidParameterException' => throw new InvalidImageException("Parâmetros inválidos na requisição."),
+            'ThrottlingException' => throw new ImageProcessingFailureException("Muitas requisições simultâneas. Tente novamente em alguns instantes."),
+            'ServiceQuotaExceededException' => throw new ImageProcessingFailureException("Cota de serviço excedida. Tente novamente mais tarde."),
+            default => throw new ImageProcessingFailureException("Ocorreu um erro ao processar a imagem. Tente novamente mais tarde.")
+        };
     }
 }
