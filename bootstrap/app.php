@@ -72,4 +72,11 @@ return Application::configure(basePath: dirname(__DIR__))
             ]);
         });
 
+        $exceptions->renderable(function (\App\Exceptions\RekognitionFailureException $e, $request) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'error_code' => 'REKOGNITION_FAILURE'
+            ]);
+        });
+
     })->create();
