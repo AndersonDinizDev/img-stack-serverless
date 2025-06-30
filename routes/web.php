@@ -1,9 +1,10 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 
-Route::get('/teste', function () {
-    return view('teste');
-});
+if (env('APP_ENV') != 'production') {
+    Route::get('/teste', function () {
+        return view('teste');
+    });
+}

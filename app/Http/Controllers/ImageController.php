@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProcessImageRequest;
-use App\Http\Services\ImageProcessingService;
+use App\Http\Services\ImageService;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -12,7 +12,7 @@ use Illuminate\Http\Response;
 class ImageController extends Controller
 {
 
-    public function __construct(private ImageProcessingService $imgService)
+    public function __construct(private ImageService $imgService)
     {
         $this->imgService = $imgService;
     }
