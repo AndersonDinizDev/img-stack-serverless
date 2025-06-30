@@ -79,7 +79,8 @@ package:
     - "!tests/**"
     - "!database/*.sqlite"
     - "!public/build/**"
-    - "public/build/manifest.json"
+  exclude:
+    - ".env"
 
 functions:
   web:

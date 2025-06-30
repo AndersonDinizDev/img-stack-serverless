@@ -2,6 +2,7 @@
 
 namespace App\Http\Services;
 
+use App\Exceptions\AwsServiceFailureException;
 use App\Exceptions\ImageProcessingFailureException;
 use App\Exceptions\InvalidImageException;
 use Aws\Exception\AwsException;
@@ -22,8 +23,7 @@ class RekognitionService
      *
      * @param mixed $image
      * @return array
-     * @throws ImageProcessingFailureException
-     * @throws InvalidImageException
+     * @throws InvalidImageException|ImageProcessingFailureException|AwsServiceFailureException
      */
     public function detectModeration(mixed $image): array
     {
@@ -39,7 +39,7 @@ class RekognitionService
             self::handleException($e);
         } catch (AwsException $e) {
             Log::error($e->getMessage());
-            throw new ImageProcessingFailureException("Falha na comunicação com os serviços. Tente novamente mais tarde.");
+            throw new AwsServiceFailureException("Falha na comunicação com os serviços. Tente novamente mais tarde.");
         }
 
         $result = $checkImage->get('ModerationLabels');
@@ -61,8 +61,7 @@ class RekognitionService
      *
      * @param mixed $image
      * @return array
-     * @throws InvalidImageException
-     * @throws ImageProcessingFailureException
+     * @throws InvalidImageException|ImageProcessingFailureException|AwsServiceFailureException
      */
     public function detectFaces(mixed $image): array
     {
@@ -77,7 +76,7 @@ class RekognitionService
             self::handleException($e);
         } catch (AwsException $e) {
             Log::error($e->getMessage());
-            throw new ImageProcessingFailureException("Falha na comunicação com os serviços. Tente novamente mais tarde.");
+            throw new AwsServiceFailureException("Falha na comunicação com os serviços. Tente novamente mais tarde.");
         }
 
         $result = $checkImage->get('FaceDetails');
@@ -101,8 +100,7 @@ class RekognitionService
     /**
      * @param RekognitionException $e
      * @return void
-     * @throws ImageProcessingFailureException
-     * @throws InvalidImageException
+     * @throws InvalidImageException|ImageProcessingFailureException
      */
     public function handleException(RekognitionException $e): void
     {
