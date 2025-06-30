@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 class WorkerService
 {
 
-    public function __construct(private DynamoDbClient $dynamodb, private Marshaler $marshaler, private RekognitionService $rekognitionService)
+    public function __construct(private DynamoDBService $dynamoDBService, private RekognitionService $rekognitionService)
     {
     }
 
@@ -110,12 +110,7 @@ class WorkerService
                 $item['completed_at'] = time();
             }
 
-            $this->dynamodb->putItem([
-                'TableName' => env('DYNAMODB_JOBS_TABLE'),
-                'Item' => $this->marshaler->marshalItem($item)
-            ]);
-
-            return true;
+            $this->dynamoDBService->createItem(env('DYNAMODB_JOBS_TABLE'), $item);
         } catch (Exception $e) {
             Log::error('Falha ao salvar status do job', [
                 'job_id' => $jobId,
@@ -125,6 +120,8 @@ class WorkerService
 
             throw $e;
         }
+
+        return true;
     }
 
     /**
@@ -137,23 +134,8 @@ class WorkerService
     public function getJobStatus(string $cacheKey): ?string
     {
         try {
-            $result = $this->dynamodb->query([
-                'TableName' => env('DYNAMODB_JOBS_TABLE'),
-                'IndexName' => 'cache_key-updated_at-index',
-                'KeyConditionExpression' => 'cache_key = :cache_key',
-                'ExpressionAttributeValues' => $this->marshaler->marshalItem([
-                    ':cache_key' => $cacheKey
-                ]),
-                'ScanIndexForward' => false,
-                'Limit' => 1
-            ]);
+            $search = $this->dynamoDBService->getItem(env('DYNAMODB_JOBS_TABLE'), 'cache_key', $cacheKey, 'cache_key-updated_at-index', 1);
 
-            if (!empty($result['Items'])) {
-                $item = $this->marshaler->unmarshalItem($result['Items'][0]);
-                return $item['status'];
-            }
-
-            return null;
         } catch (Exception $e) {
             Log::error('Falha ao obter status do job', [
                 'cache_key' => $cacheKey,
@@ -162,6 +144,8 @@ class WorkerService
 
             throw $e;
         }
+
+        return $search['status'] ?? null;
     }
 
     /**
@@ -176,21 +160,12 @@ class WorkerService
     public function updateJobProgress(string $jobId, int $progress, string $status = 'processing'): bool
     {
         try {
-            $this->dynamodb->updateItem([
-                'TableName' => env('DYNAMODB_JOBS_TABLE'),
-                'Key' => $this->marshaler->marshalItem(['job_id' => $jobId]),
-                'UpdateExpression' => 'SET progress = :progress, #status = :status, updated_at = :timestamp',
-                'ExpressionAttributeNames' => [
-                    '#status' => 'status'
-                ],
-                'ExpressionAttributeValues' => $this->marshaler->marshalItem([
-                    ':progress' => $progress,
-                    ':status' => $status,
-                    ':timestamp' => time()
-                ])
+            $this->dynamoDBService->updateItem(env('DYNAMODB_JOBS_TABLE'), $jobId, 'job_id', [
+                'progress' => $progress,
+                'status' => $status,
+                'updated_at' => time()
             ]);
 
-            return true;
         } catch (Exception $e) {
             Log::error('Falha ao atualizar progresso do job', [
                 'job_id' => $jobId,
@@ -199,5 +174,7 @@ class WorkerService
 
             throw $e;
         }
+
+        return true;
     }
 }

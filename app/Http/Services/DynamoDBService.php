@@ -23,10 +23,13 @@ class DynamoDBService
      * @return bool
      * @throws DynamoDBFailureException|AwsServiceFailureException
      */
-    public function createItem(array $data): bool
+    public function createItem(string $table, array $data): bool
     {
         try {
-            $this->dynamodb->putItem($data);
+            $this->dynamodb->putItem([
+                'TableName' => $table,
+                'Item' => $this->marshaler->marshalItem($data)
+            ]);
         } catch (DynamoDbException $e) {
             self::handleException($e);
         } catch (AwsException $e) {
@@ -39,15 +42,38 @@ class DynamoDBService
 
     /**
      * Atualiza um item na tabela informada
-     *
+     * @param string $table
+     * @param string $key
+     * @param string $idName
      * @param array $data
      * @return bool
      * @throws AwsServiceFailureException|DynamoDBFailureException
      */
-    public function updateItem(array $data): bool
+    public function updateItem(string $table, string $key, string $idName, array $data): bool
     {
         try {
-            $this->dynamodb->updateItem($data);
+            $updateExpression = 'SET ';
+            $expressionAttributeNames = [];
+            $expressionAttributeValues = [];
+            $count = 0;
+
+            foreach ($data as $field => $value) {
+                if ($count > 0) {
+                    $updateExpression .= ', ';
+                }
+                $updateExpression .= "#{$field} = :{$field}";
+                $expressionAttributeNames["#{$field}"] = $field;
+                $expressionAttributeValues[":{$field}"] = $value;
+                $count++;
+            }
+
+            $this->dynamodb->updateItem([
+                'TableName' => $table,
+                'Key' => $this->marshaler->marshalItem([$idName => $key]),
+                'UpdateExpression' => $updateExpression,
+                'ExpressionAttributeNames' => $expressionAttributeNames,
+                'ExpressionAttributeValues' => $this->marshaler->marshalItem($expressionAttributeValues)
+            ]);
         } catch (DynamoDbException $e) {
             self::handleException($e);
         } catch (AwsException $e) {
@@ -68,7 +94,7 @@ class DynamoDBService
      * @return array
      * @throws AwsServiceFailureException|DynamoDBFailureException
      */
-    public function getItem(string $tableName, string $key, string $index = null, int $limit = 1): array
+    public function getItem(string $tableName, string $key, string $value, string $index = null, int $limit = 1): array
     {
         try {
             $result = $this->dynamodb->query([
@@ -79,7 +105,7 @@ class DynamoDBService
                     '#key' => $key
                 ],
                 'ExpressionAttributeValues' => $this->marshaler->marshalItem([
-                    ':key' => $key
+                    ':key' => $value
                 ]),
                 'ScanIndexForward' => false,
                 'Limit' => $limit
@@ -91,7 +117,11 @@ class DynamoDBService
             throw new AwsServiceFailureException("Falha na comunicação com os serviços. Tente novamente mais tarde.");
         }
 
-        return $result['Item'] ?? [];
+        if (!empty($result['Items'])) {
+            return $this->marshaler->unmarshalItem($result['Items'][0]);
+        }
+
+        return [];
     }
 
 
