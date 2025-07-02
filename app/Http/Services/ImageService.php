@@ -31,7 +31,7 @@ class ImageService
         $cachePath = "{$cacheKey}.{$cacheKeyParams['format']}";
 
         if (StorageService::searchFile('s3_cache', $cachePath)) {
-            $signedUrl = StorageService::getSignerUrl($cachePath);
+            $signedUrl = CloudFrontService::getSignerUrl($cachePath);
 
             return [
                 'status' => 'ready',

@@ -2,15 +2,12 @@
 
 namespace App\Http\Services;
 
-use App\Exceptions\CloudFrontFailureException;
-use App\Exceptions\ImageProcessingFailureException;
+use App\Exceptions\AwsServiceFailureException;
 use App\Exceptions\StorageImageFailureException;
-use Aws\CloudFront\Exception\CloudFrontException;
 use Aws\Exception\AwsException;
 use Aws\S3\Exception\S3Exception;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Aws\CloudFront\UrlSigner;
 
 class StorageService
 {
@@ -20,8 +17,7 @@ class StorageService
      * @param string $path
      * @param mixed $file
      * @return bool
-     * @throws StorageImageFailureException
-     * @throws ImageProcessingFailureException
+     * @throws StorageImageFailureException|AwsServiceFailureException
      */
     public static function saveFile(string $disk, string $path, mixed $file): bool
     {
@@ -31,7 +27,7 @@ class StorageService
             self::handleS3Exception($e, 'salvar');
         } catch (AwsException $e) {
             Log::error($e->getMessage());
-            throw new ImageProcessingFailureException("Falha na comunicação com os serviços. Tente novamente mais tarde.");
+            throw new AwsServiceFailureException("Falha na comunicação com os serviços. Tente novamente mais tarde.");
         }
 
         return $save;
@@ -42,8 +38,7 @@ class StorageService
      * @param string $disk
      * @param string $path
      * @return bool
-     * @throws StorageImageFailureException
-     * @throws ImageProcessingFailureException
+     * @throws StorageImageFailureException|AwsServiceFailureException
      */
     public static function searchFile(string $disk, string $path): bool
     {
@@ -53,41 +48,10 @@ class StorageService
             self::handleS3Exception($e, 'procurar');
         } catch (AwsException $e) {
             Log::error($e->getMessage());
-            throw new ImageProcessingFailureException("Falha na comunicação com os serviços. Tente novamente mais tarde.");
+            throw new AwsServiceFailureException("Falha na comunicação com os serviços. Tente novamente mais tarde.");
         }
 
         return $search;
-    }
-
-    /**
-     * Retorna a url assinada do objeto
-     * @param string $path
-     * @return string
-     * @throws ImageProcessingFailureException
-     * @throws CloudFrontFailureException
-     */
-    public static function getSignerUrl(string $path): string
-    {
-        $cloudFront = new UrlSigner(env('CLOUDFRONT_KEY_PAIR_ID'), env('CLOUDFRONT_PRIVATE_KEY'));
-        $resourceUrl = "https://" . env('CLOUDFRONT_DOMAIN') . "/{$path}";
-        try {
-            $url = $cloudFront->getSignedUrl($resourceUrl, time() + 3600);
-        } catch (CloudFrontException $e) {
-            match ($e->getAwsErrorCode()) {
-                'InvalidSignature' => throw new CloudFrontFailureException("Falha na assinatura do URL. Tente novamente mais tarde."),
-                'InvalidKeyPairId' => throw new CloudFrontFailureException("ID do par de chaves inválido."),
-                'AccessDenied' => throw new CloudFrontFailureException("Acesso negado ao CloudFront."),
-                'NoSuchDistribution' => throw new CloudFrontFailureException("Distribuição CloudFront não encontrada."),
-                'MalformedPrivateKey' => throw new CloudFrontFailureException("Chave privada com formato inválido."),
-                'InvalidArgument' => throw new CloudFrontFailureException("Argumento inválido na requisição."),
-                default => throw new ImageProcessingFailureException("Ocorreu um erro ao processar a imagem. Tente novamente mais tarde.")
-            };
-        } catch (AwsException $e) {
-            Log::error($e->getMessage());
-            throw new ImageProcessingFailureException("Falha na comunicação com os serviços. Tente novamente mais tarde.");
-        }
-
-        return $url;
     }
 
     /**
@@ -95,8 +59,7 @@ class StorageService
      * @param string $disk
      * @param string $path
      * @return string
-     * @throws StorageImageFailureException
-     * @throws ImageProcessingFailureException
+     * @throws StorageImageFailureException|AwsServiceFailureException
      */
     public static function getFile(string $disk, string $path): string
     {
@@ -106,7 +69,7 @@ class StorageService
             self::handleS3Exception($e);
         } catch (AwsException $e) {
             Log::error($e->getMessage());
-            throw new ImageProcessingFailureException("Falha na comunicação com os serviços. Tente novamente mais tarde.");
+            throw new AwsServiceFailureException("Falha na comunicação com os serviços. Tente novamente mais tarde.");
         }
 
         return $file;
@@ -127,7 +90,7 @@ class StorageService
             'InvalidAccessKeyId' => throw new StorageImageFailureException("Credenciais inválidas"),
             'SignatureDoesNotMatch' => throw new StorageImageFailureException("Assinatura inválida"),
             'NetworkConnection' => throw new StorageImageFailureException("Erro de conexão com o S3"),
-            default => throw new StorageImageFailureException("Erro ao {$action} o arquivo")
+            default => throw new StorageImageFailureException("Erro ao {$action} o arquivo. Tente novamente mais tarde.")
         };
     }
 }

@@ -49,4 +49,12 @@ return [
         ],
     ],
 
+    'cloudfront' => [
+        'keys' => [
+            'pair_id' => env('CLOUDFRONT_KEY_PAIR_ID', null),
+            'private_key' => env('CLOUDFRONT_PRIVATE_KEY', null)
+        ],
+        'domain' => env('CLOUDFRONT_DOMAIN', null),
+    ]
+
 ];

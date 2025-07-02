@@ -3,10 +3,7 @@
 namespace App\Http\Services;
 
 use App\Exceptions\FailedJobException;
-use Aws\DynamoDb\DynamoDbClient;
-use Aws\DynamoDb\Marshaler;
 use Exception;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class WorkerService
@@ -109,7 +106,7 @@ class WorkerService
             $item['completed_at'] = time();
         }
 
-        $this->dynamoDBService->createItem(env('DYNAMODB_JOBS_TABLE'), $item);
+        $this->dynamoDBService->createItem(config('services.dynamodb.tables.jobs'), $item);
 
         return true;
     }
@@ -123,7 +120,7 @@ class WorkerService
      */
     public function getJobStatus(string $cacheKey): ?string
     {
-        $search = $this->dynamoDBService->getItem(env('DYNAMODB_JOBS_TABLE'), 'cache_key', $cacheKey, 'cache_key-updated_at-index', 1);
+        $search = $this->dynamoDBService->getItem(config('services.dynamodb.tables.jobs'), 'cache_key', $cacheKey, 'cache_key-updated_at-index', 1);
 
         return $search['status'] ?? null;
     }
@@ -139,7 +136,7 @@ class WorkerService
      */
     public function updateJobProgress(string $jobId, int $progress, string $status = 'processing'): bool
     {
-        $this->dynamoDBService->updateItem(env('DYNAMODB_JOBS_TABLE'), $jobId, 'job_id', [
+        $this->dynamoDBService->updateItem(config('services.dynamodb.tables.jobs'), $jobId, 'job_id', [
             'progress' => $progress,
             'status' => $status,
             'updated_at' => time()
