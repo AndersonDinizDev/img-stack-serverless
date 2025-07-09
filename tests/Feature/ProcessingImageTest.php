@@ -73,6 +73,31 @@ class ProcessingImageTest extends TestCase
         $this->assertNotEquals($originalPixelColor, $processedPixelColor, "O blur não foi aplicado na imagem");
     }
 
+    #[Test]
+    public function it_applies_the_transformations_to_the_image_with_moderation_detection_by_ai(): void
+    {
+        $transformation = [
+            'width' => 500,
+            'height' => 500,
+            'format' => 'jpeg',
+            'ai_analisis' => [
+                'safe' => [
+                    'is_safe' => false,
+                ]
+            ]
+        ];
+
+        $imageProcessed = $this->service->transformImage($this->image->getContent(), $transformation, $transformation['ai_analisis']);
+
+        $imageDecode = ImageManager::imagick()->read($imageProcessed);
+        $originalImageDecode = ImageManager::imagick()->read($this->image->getContent());
+
+        $originalPixelColor = $originalImageDecode->pickColor(100, 100);
+        $imageProcessedPixelColor = $imageDecode->pickColor(100, 100);
+
+        $this->assertNotEquals($originalPixelColor->toString(), $imageProcessedPixelColor->toString(), "O blur não foi aplicado na imagem");
+    }
+
     /**
      * @return string
      */

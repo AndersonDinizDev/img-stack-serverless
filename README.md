@@ -279,7 +279,7 @@ php artisan queue:retry [job-id]
 ### Testes
 
 ```bash
-# Testes de feature/unitários
+# Testes de integração
 make test
 
 # Teste de processamento
