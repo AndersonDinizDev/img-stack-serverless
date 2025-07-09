@@ -40,10 +40,10 @@ class ImageProcessingService
             }
 
             if (isset($imageCheck['faces']['is_face']) && $imageCheck['faces']['is_face'] === true) {
-                $faceWidth = $transformations['width'] * $imageCheck['faces']['labels'][0]['Width'];
-                $faceHeight = $transformations['height'] * $imageCheck['faces']['labels'][0]['Height'];
-                $faceLeft = $transformations['width'] * $imageCheck['faces']['labels'][0]['Left'];
-                $faceTop = $transformations['height'] * $imageCheck['faces']['labels'][0]['Top'];
+                $faceWidth = (int)$transformations['width'] * $imageCheck['faces']['labels'][0]['Width'];
+                $faceHeight = (int)$transformations['height'] * $imageCheck['faces']['labels'][0]['Height'];
+                $faceLeft = (int)$transformations['width'] * $imageCheck['faces']['labels'][0]['Left'];
+                $faceTop = (int)$transformations['height'] * $imageCheck['faces']['labels'][0]['Top'];
 
                 $imageClone = clone $image;
                 $imageClone->crop($faceWidth, $faceHeight, $faceLeft, $faceTop);

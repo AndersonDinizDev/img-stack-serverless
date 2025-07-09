@@ -361,10 +361,10 @@ process_image "https://example.com/image.jpg"</code></pre>
             {url: 'https://images.pexels.com/photos/2253275/pexels-photo-2253275.jpeg', title: 'Imagem 3'},
             {url: 'https://images.pexels.com/photos/1563356/pexels-photo-1563356.jpeg', title: 'Imagem 4'},
             {
-                url: 'https://images.pexels.com/photos/2422915/pexels-photo-2422915.jpeg',
+                url: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg',
                 title: 'Imagem 5'
             },
-            {url: 'https://www.forte.jor.br/wp-content/uploads/2024/09/ARAD-7-1024x683.jpg', title: 'Imagem 6'}
+            {url: 'https://images.pexels.com/photos/163443/war-desert-guns-gunshow-163443.jpeg', title: 'Imagem 6'}
         ]
     };
 
