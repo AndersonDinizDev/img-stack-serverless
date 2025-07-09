@@ -57,6 +57,7 @@ class WorkerService
         try {
             \App\Jobs\ProcessImageJob::dispatch($jobData);
 
+
             $this->saveJobStatus($cacheKey, $jobData['job_id'], 'queued', 0);
             return true;
 

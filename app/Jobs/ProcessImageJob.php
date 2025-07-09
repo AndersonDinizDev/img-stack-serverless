@@ -25,6 +25,11 @@ class ProcessImageJob implements ShouldQueue
         $this->jobData = $jobData;
     }
 
+    public function getJobData(): array
+    {
+        return $this->jobData;
+    }
+
     /**
      * @throws Exception
      */
