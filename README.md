@@ -8,7 +8,7 @@ pré-processamento.
 
 ### Características Principais
 
-- **Processamento Inteligente**: Decisão automática entre processamento síncrono e assíncrono
+- **Processamento Assincrono**: Processamento feito totalmente via AWS SQS
 - **Cache Inteligente**: Sistema de cache baseado em conteúdo com TTL automático
 - **Arquitetura Serverless**: Escalabilidade automática usando AWS Lambda
 - **URLs Assinadas**: Segurança através do CloudFront com chaves privadas
@@ -21,10 +21,10 @@ pré-processamento.
 - **WorkerService**: Gerencia jobs assíncronos via SQS e DynamoDB
 - **ProcessImageJob**: Worker Lambda para processamento pesado
 - **StorageService**: Abstração para S3 e CloudFront
+- **DynamoDBService**: Responsável por gerenciar a tabela de jobs
+- **RekognitionService**: Utiliza do serviço para análise de imagens com IA
 
 ### Fluxo de Processamento
-
-#### Processamento Assíncrono
 
 ```
 Requisição → Verificar Cache na S3 → Adiciona à Fila → Retorna Informação `Retry-After`
@@ -157,9 +157,6 @@ serverless deploy function --function web --stage dev
 ```bash
 # Deploy completo
 make deploy-prod
-
-# Deploy incremental
-serverless deploy --stage prod
 ```
 
 ### Verificação do Deploy
@@ -203,14 +200,14 @@ serverless logs --function web --stage prod --tail
 
 - **S3 Bucket**: Cache de imagens com lifecycle policy (90 dias)
 - **DynamoDB**:
-    - Tabela principal para metadata
+    - Tabela para controle de jobs
     - GSI para queries por status
     - TTL automático
 
 #### Rede e Distribuição
 
 - **CloudFront**: CDN global com cache inteligente
-- **SQS**: Fila principal + Dead Letter Queue
+- **SQS**: Fila principal
 - **IAM Roles**: Permissões mínimas necessárias
 
 ### Otimizações de Performance
@@ -247,6 +244,12 @@ serverless logs --function web --stage prod --tail
 | `make deploy-prod` | Deploy para produção            |
 | `make remove-dev`  | Remove stack de desenvolvimento |
 | `make remove-prod` | Remove stack de produção        |
+
+### Outros
+
+| Comando         | Descrição                    |
+|-----------------|------------------------------|
+| `make git-save` | Atalho para commit no github |
 
 ### AWS
 
