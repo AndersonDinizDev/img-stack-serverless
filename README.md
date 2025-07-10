@@ -8,7 +8,7 @@ pré-processamento.
 
 ### Características Principais
 
-- **Processamento Assincrono**: Processamento feito via AWS SQS
+- **Processamento Assincrono**: Processamento feito totalmente via AWS SQS
 - **Cache Inteligente**: Sistema de cache baseado em conteúdo com TTL automático
 - **Arquitetura Serverless**: Escalabilidade automática usando AWS Lambda
 - **URLs Assinadas**: Segurança através do CloudFront com chaves privadas
