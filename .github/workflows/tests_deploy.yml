@@ -82,10 +82,7 @@ jobs:
 
       - name: Pre-generate Laravel Cache Files
         run: |
-          php artisan config:cache
-          php artisan route:cache
-          php artisan view:cache
-          php artisan event:cache
+          php artisan optimize:clear
 
       - name: Install Serverless Framework
         run: npm install -g serverless@3
