@@ -80,12 +80,8 @@ jobs:
       - name: Generate Application Key
         run: php artisan key:generate
 
-      - name: Pre-generate Laravel Cache Files
-        run: |
-          php artisan optimize:clear
-
       - name: Install Serverless Framework
-        run: npm install -g serverless@3
+        run: npm install -g serverless@3.39.0
 
       - name: Install NPM dependencies
         run: npm install
